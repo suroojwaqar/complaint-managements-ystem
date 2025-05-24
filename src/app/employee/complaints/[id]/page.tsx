@@ -100,6 +100,20 @@ interface ComplaintHistory {
   timestamp: string;
 }
 
+type BadgeVariant = 'secondary' | 'default' | 'new' | 'done' | 'assigned' | 'completed' | 'closed' | 'outline' | 'destructive' | 'in-progress';
+
+const getStatusVariant = (status: string): BadgeVariant => {
+  const variantMap: Record<string, BadgeVariant> = {
+    'New': 'new',
+    'Assigned': 'assigned',
+    'In Progress': 'in-progress',
+    'Completed': 'completed',
+    'Done': 'done',
+    'Closed': 'closed'
+  };
+  return variantMap[status] || 'default';
+};
+
 const statusOptions = [
   { value: 'New', label: 'New', color: 'bg-blue-100 text-blue-800' },
   { value: 'Assigned', label: 'Assigned', color: 'bg-yellow-100 text-yellow-800' },

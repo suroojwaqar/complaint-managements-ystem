@@ -1,33 +1,60 @@
-import NextAuth, { AuthOptions } from 'next-auth';
+import NextAuth from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
+import { compare } from 'bcryptjs';
 import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
+import { DefaultSession } from 'next-auth';
 
-export const authOptions: AuthOptions = {
+// Extend the built-in session types
+declare module 'next-auth' {
+  interface Session extends DefaultSession {
+    user: {
+      id: string;
+      role: string;
+      department?: string;
+    } & DefaultSession['user']
+  }
+}
+
+interface MongoUser {
+  _id: {
+    toString(): string;
+  };
+  email: string;
+  name: string;
+  role: string;
+  department?: {
+    toString(): string;
+  };
+  password: string;
+}
+
+// Define auth configuration
+const handler = NextAuth({
   providers: [
     CredentialsProvider({
       name: 'Credentials',
       credentials: {
-        email: { label: 'Email', type: 'text' },
-        password: { label: 'Password', type: 'password' },
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          throw new Error('Email and password required');
+          throw new Error('Please provide both email and password');
         }
 
         await dbConnect();
 
-        const user = await User.findOne({ email: credentials.email, isActive: true });
+        const user = await User.findOne({ email: credentials.email }) as MongoUser | null;
 
         if (!user) {
-          throw new Error('Invalid email or password');
+          throw new Error('No user found with this email');
         }
 
-        const isValid = await user.comparePassword(credentials.password);
+        const isValid = await compare(credentials.password, user.password);
 
         if (!isValid) {
-          throw new Error('Invalid email or password');
+          throw new Error('Invalid password');
         }
 
         return {
@@ -37,8 +64,8 @@ export const authOptions: AuthOptions = {
           role: user.role,
           department: user.department?.toString(),
         };
-      },
-    }),
+      }
+    })
   ],
   callbacks: {
     async jwt({ token, user }) {
@@ -50,13 +77,13 @@ export const authOptions: AuthOptions = {
       return token;
     },
     async session({ session, token }) {
-      if (token) {
+      if (token && session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as string;
         session.user.department = token.department as string;
       }
       return session;
-    },
+    }
   },
   pages: {
     signIn: '/login',
@@ -64,10 +91,8 @@ export const authOptions: AuthOptions = {
   },
   session: {
     strategy: 'jwt',
-    maxAge: 30 * 24 * 60 * 60, // 30 days
-  },
-  secret: process.env.NEXTAUTH_SECRET,
-};
+    maxAge: 24 * 60 * 60, // 24 hours
+  }
+});
 
-const handler = NextAuth(authOptions);
 export { handler as GET, handler as POST };
