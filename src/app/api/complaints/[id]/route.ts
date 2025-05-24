@@ -60,10 +60,21 @@ export async function GET(req: NextRequest, { params }: Params) {
       return NextResponse.json({ error: 'You can only view complaints assigned to you' }, { status: 403 });
     }
     
-    // Managers can view complaints from their department
-    if (currentUser.role === 'manager' && complaint.department._id.toString() !== currentUser.department) {
-      console.log('Manager permission denied - not their department');
-      return NextResponse.json({ error: 'You can only view complaints from your department' }, { status: 403 });
+    // Managers can view complaints from their department or assigned to them
+    if (currentUser.role === 'manager') {
+      const userDepartment = currentUser.department;
+      const complaintDepartment = complaint.department._id.toString();
+      const isAssignedToManager = complaint.currentAssigneeId._id.toString() === currentUser.id;
+      
+      console.log('Manager permission check:');
+      console.log('User department:', userDepartment);
+      console.log('Complaint department:', complaintDepartment);
+      console.log('Is assigned to manager:', isAssignedToManager);
+      
+      if (!userDepartment || (complaintDepartment !== userDepartment && !isAssignedToManager)) {
+        console.log('Manager permission denied - not their department and not assigned to them');
+        return NextResponse.json({ error: 'You can only view complaints from your department or assigned to you' }, { status: 403 });
+      }
     }
     
     // Admins can view all complaints (no additional check needed)

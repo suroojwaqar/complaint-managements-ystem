@@ -4,6 +4,7 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import dbConnect from '@/lib/mongodb';
 import Complaint from '@/models/Complaint';
 import Department from '@/models/Department';
+import User from '@/models/User';
 import ComplaintHistory from '@/models/ComplaintHistory';
 
 interface Params {
@@ -12,7 +13,7 @@ interface Params {
   };
 }
 
-// Reassign complaint to a different department
+// Reassign complaint to a different department or user
 export const POST = async (req: NextRequest, { params }: Params) => {
   try {
     console.log('=== COMPLAINT ASSIGNMENT START ===');
@@ -25,25 +26,14 @@ export const POST = async (req: NextRequest, { params }: Params) => {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
-    // Only admins can reassign departments
-    if (session.user.role !== 'admin') {
-      console.log('ERROR: User is not admin:', session.user.role);
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-    }
-    
-    console.log('SUCCESS: Admin authenticated');
+    const currentUser = session.user;
+    console.log('User role:', currentUser.role);
     
     await dbConnect();
     console.log('SUCCESS: Database connected');
     
     const body = await req.json();
     console.log('Request body:', body);
-    
-    const { department: newDepartmentId, notes } = body;
-    
-    if (!newDepartmentId) {
-      return NextResponse.json({ error: 'Department ID is required' }, { status: 400 });
-    }
     
     // Validate complaint exists
     const complaint = await Complaint.findById(params.id);
@@ -54,61 +44,26 @@ export const POST = async (req: NextRequest, { params }: Params) => {
     
     console.log('SUCCESS: Complaint found:', complaint.title);
     
-    // Validate new department exists and is active
-    const newDepartment = await Department.findOne({
-      _id: newDepartmentId,
-      isActive: true
-    }).populate('managerId defaultAssigneeId', 'name email');
-    
-    if (!newDepartment) {
-      console.log('ERROR: Department not found or inactive');
-      return NextResponse.json({ error: 'Invalid or inactive department' }, { status: 400 });
-    }
-    
-    console.log('SUCCESS: New department validated:', newDepartment.name);
-    
-    // Get current department info for history
-    const currentDepartment = await Department.findById(complaint.department);
-    const currentDepartmentName = currentDepartment?.name || 'Unknown';
-    
-    // Update complaint with new department and assignee
-    complaint.department = newDepartmentId;
-    complaint.currentAssigneeId = newDepartment.defaultAssigneeId._id;
-    complaint.status = 'Assigned'; // Update status to reflect reassignment
-    
-    await complaint.save();
-    console.log('SUCCESS: Complaint updated');
-    
-    // Create history entry
-    const historyNote = notes || `Complaint reassigned from ${currentDepartmentName} to ${newDepartment.name} by admin`;
-    
-    await ComplaintHistory.create({
-      complaintId: params.id,
-      status: 'Assigned',
-      assignedTo: newDepartment.defaultAssigneeId._id,
-      notes: historyNote,
-      changedBy: session.user.id
-    });
-    
-    console.log('SUCCESS: History entry created');
-    
-    // Return updated complaint with populated fields
-    const updatedComplaint = await Complaint.findById(params.id)
-      .populate('clientId', 'name email')
-      .populate('department', 'name')
-      .populate('currentAssigneeId', 'name email')
-      .populate('natureType', 'name description');
-    
-    console.log('=== COMPLAINT ASSIGNMENT COMPLETE ===');
-    
-    return NextResponse.json({
-      complaint: updatedComplaint,
-      message: `Complaint successfully reassigned to ${newDepartment.name} department`,
-      newAssignee: {
-        name: newDepartment.defaultAssigneeId.name,
-        email: newDepartment.defaultAssigneeId.email
+    // Handle different assignment types
+    if (body.department) {
+      // Department reassignment (admin only)
+      if (currentUser.role !== 'admin') {
+        console.log('ERROR: Only admins can reassign departments');
+        return NextResponse.json({ error: 'Admin access required for department reassignment' }, { status: 403 });
       }
-    });
+      
+      return await handleDepartmentReassignment(params.id, body, currentUser);
+    } else if (body.userId) {
+      // User assignment (managers and admins)
+      if (!['manager', 'admin'].includes(currentUser.role)) {
+        console.log('ERROR: Insufficient permissions for user assignment');
+        return NextResponse.json({ error: 'Manager or admin access required' }, { status: 403 });
+      }
+      
+      return await handleUserAssignment(params.id, body, currentUser, complaint);
+    } else {
+      return NextResponse.json({ error: 'Either department or userId must be specified' }, { status: 400 });
+    }
     
   } catch (error: any) {
     console.error('=== COMPLAINT ASSIGNMENT ERROR ===');
@@ -116,9 +71,152 @@ export const POST = async (req: NextRequest, { params }: Params) => {
     console.error('Stack:', error.stack);
     
     return NextResponse.json({
-      error: 'Failed to reassign complaint',
+      error: 'Failed to assign complaint',
       details: error.message,
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     }, { status: 500 });
   }
 };
+
+// Handle department reassignment (admin only)
+async function handleDepartmentReassignment(complaintId: string, body: any, currentUser: any) {
+  const { department: newDepartmentId, notes } = body;
+  
+  if (!newDepartmentId) {
+    return NextResponse.json({ error: 'Department ID is required' }, { status: 400 });
+  }
+  
+  // Validate new department exists and is active
+  const newDepartment = await Department.findOne({
+    _id: newDepartmentId,
+    isActive: true
+  }).populate('managerId defaultAssigneeId', 'name email');
+  
+  if (!newDepartment) {
+    console.log('ERROR: Department not found or inactive');
+    return NextResponse.json({ error: 'Invalid or inactive department' }, { status: 400 });
+  }
+  
+  console.log('SUCCESS: New department validated:', newDepartment.name);
+  
+  const complaint = await Complaint.findById(complaintId);
+  
+  // Get current department info for history
+  const currentDepartment = await Department.findById(complaint.department);
+  const currentDepartmentName = currentDepartment?.name || 'Unknown';
+  
+  // Update complaint with new department and assignee
+  complaint.department = newDepartmentId;
+  complaint.currentAssigneeId = newDepartment.defaultAssigneeId._id;
+  complaint.status = 'Assigned';
+  
+  await complaint.save();
+  console.log('SUCCESS: Complaint updated');
+  
+  // Create history entry
+  const historyNote = notes || `Complaint reassigned from ${currentDepartmentName} to ${newDepartment.name} by admin`;
+  
+  await ComplaintHistory.create({
+    complaintId: complaintId,
+    status: 'Assigned',
+    assignedTo: newDepartment.defaultAssigneeId._id,
+    notes: historyNote,
+    changedBy: currentUser.id
+  });
+  
+  console.log('SUCCESS: History entry created');
+  
+  // Return updated complaint
+  const updatedComplaint = await Complaint.findById(complaintId)
+    .populate('clientId', 'name email')
+    .populate('department', 'name')
+    .populate('currentAssigneeId', 'name email')
+    .populate('natureType', 'name description');
+  
+  return NextResponse.json({
+    complaint: updatedComplaint,
+    message: `Complaint successfully reassigned to ${newDepartment.name} department`,
+    newAssignee: {
+      name: newDepartment.defaultAssigneeId.name,
+      email: newDepartment.defaultAssigneeId.email
+    }
+  });
+}
+
+// Handle user assignment within department (managers and admins)
+async function handleUserAssignment(complaintId: string, body: any, currentUser: any, complaint: any) {
+  const { userId, notes } = body;
+  
+  if (!userId) {
+    return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
+  }
+  
+  // Validate new assignee exists and is active
+  const newAssignee = await User.findOne({
+    _id: userId,
+    isActive: true
+  }).populate('department', 'name');
+  
+  if (!newAssignee) {
+    console.log('ERROR: User not found or inactive');
+    return NextResponse.json({ error: 'Invalid or inactive user' }, { status: 400 });
+  }
+  
+  console.log('SUCCESS: New assignee validated:', newAssignee.name);
+  
+  // Permission check for managers
+  if (currentUser.role === 'manager') {
+    const userDepartment = currentUser.department;
+    const complaintDepartment = complaint.department.toString();
+    const assigneeDepartment = newAssignee.department._id.toString();
+    
+    // Manager can only assign within their department
+    if (userDepartment !== complaintDepartment || userDepartment !== assigneeDepartment) {
+      console.log('ERROR: Manager can only assign within their department');
+      return NextResponse.json({ 
+        error: 'You can only assign complaints to users within your department' 
+      }, { status: 403 });
+    }
+  }
+  
+  // Get current assignee info for history
+  const currentAssignee = await User.findById(complaint.currentAssigneeId);
+  const currentAssigneeName = currentAssignee?.name || 'Unknown';
+  
+  // Update complaint assignee
+  complaint.currentAssigneeId = userId;
+  complaint.status = 'Assigned';
+  
+  await complaint.save();
+  console.log('SUCCESS: Complaint assignee updated');
+  
+  // Create history entry
+  const historyNote = notes || `Complaint reassigned from ${currentAssigneeName} to ${newAssignee.name}`;
+  
+  await ComplaintHistory.create({
+    complaintId: complaintId,
+    status: 'Assigned',
+    assignedFrom: complaint.currentAssigneeId,
+    assignedTo: userId,
+    notes: historyNote,
+    changedBy: currentUser.id
+  });
+  
+  console.log('SUCCESS: History entry created');
+  
+  // Return updated complaint
+  const updatedComplaint = await Complaint.findById(complaintId)
+    .populate('clientId', 'name email')
+    .populate('department', 'name')
+    .populate('currentAssigneeId', 'name email')
+    .populate('natureType', 'name description');
+  
+  return NextResponse.json({
+    complaint: updatedComplaint,
+    message: `Complaint successfully assigned to ${newAssignee.name}`,
+    newAssignee: {
+      name: newAssignee.name,
+      email: newAssignee.email
+    }
+  });
+}
