@@ -196,8 +196,8 @@ export default function AdminComplaintsPage() {
 
     // Sort
     filtered.sort((a, b) => {
-      let aValue = a[sortBy as keyof Complaint];
-      let bValue = b[sortBy as keyof Complaint];
+      let aValue: string = '';
+      let bValue: string = '';
 
       if (sortBy === 'clientId') {
         aValue = a.clientId?.name || '';
@@ -208,12 +208,15 @@ export default function AdminComplaintsPage() {
       } else if (sortBy === 'currentAssigneeId') {
         aValue = a.currentAssigneeId?.name || '';
         bValue = b.currentAssigneeId?.name || '';
+      } else {
+        aValue = String(a[sortBy as keyof Complaint] || '');
+        bValue = String(b[sortBy as keyof Complaint] || '');
       }
 
       if (sortOrder === 'asc') {
-        return aValue > bValue ? 1 : -1;
+        return aValue.localeCompare(bValue);
       } else {
-        return aValue < bValue ? 1 : -1;
+        return bValue.localeCompare(aValue);
       }
     });
 

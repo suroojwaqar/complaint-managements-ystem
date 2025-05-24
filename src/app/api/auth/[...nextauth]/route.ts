@@ -1,11 +1,20 @@
-import NextAuth from 'next-auth';
+import NextAuth, { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { compare } from 'bcryptjs';
 import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
-import { DefaultSession } from 'next-auth';
+import { DefaultSession, DefaultJWT } from 'next-auth';
 
-// Extend the built-in session types
+// Extend JWT type
+declare module 'next-auth/jwt' {
+  interface JWT extends DefaultJWT {
+    id: string;
+    role: string;
+    department?: string;
+  }
+}
+
+// Extend Session type
 declare module 'next-auth' {
   interface Session extends DefaultSession {
     user: {
@@ -13,6 +22,12 @@ declare module 'next-auth' {
       role: string;
       department?: string;
     } & DefaultSession['user']
+  }
+
+  interface User {
+    id: string;
+    role: string;
+    department?: string;
   }
 }
 
@@ -29,8 +44,8 @@ interface MongoUser {
   password: string;
 }
 
-// Define auth configuration
-const handler = NextAuth({
+// Auth configuration with proper typing
+export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
       name: 'Credentials',
@@ -43,32 +58,41 @@ const handler = NextAuth({
           throw new Error('Please provide both email and password');
         }
 
-        await dbConnect();
+        try {
+          await dbConnect();
+          const user = await User.findOne({ email: credentials.email }) as MongoUser | null;
 
-        const user = await User.findOne({ email: credentials.email }) as MongoUser | null;
+          if (!user) {
+            throw new Error('No user found with this email');
+          }
 
-        if (!user) {
-          throw new Error('No user found with this email');
+          const isValid = await compare(credentials.password, user.password);
+
+          if (!isValid) {
+            throw new Error('Invalid password');
+          }
+
+          return {
+            id: user._id.toString(),
+            email: user.email,
+            name: user.name,
+            role: user.role,
+            department: user.department?.toString(),
+          };
+        } catch (error) {
+          console.error('Auth error:', error);
+          return null;
         }
-
-        const isValid = await compare(credentials.password, user.password);
-
-        if (!isValid) {
-          throw new Error('Invalid password');
-        }
-
-        return {
-          id: user._id.toString(),
-          email: user.email,
-          name: user.name,
-          role: user.role,
-          department: user.department?.toString(),
-        };
       }
     })
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
+      if (trigger === 'update' && session) {
+        // Handle token updates
+        return { ...token, ...session.user };
+      }
+
       if (user) {
         token.id = user.id;
         token.role = user.role;
@@ -78,9 +102,11 @@ const handler = NextAuth({
     },
     async session({ session, token }) {
       if (token && session.user) {
-        session.user.id = token.id as string;
-        session.user.role = token.role as string;
-        session.user.department = token.department as string;
+        session.user.id = token.id;
+        session.user.role = token.role;
+        if (token.department) {
+          session.user.department = token.department;
+        }
       }
       return session;
     }
@@ -92,7 +118,9 @@ const handler = NextAuth({
   session: {
     strategy: 'jwt',
     maxAge: 24 * 60 * 60, // 24 hours
-  }
-});
+  },
+  secret: process.env.NEXTAUTH_SECRET,
+};
 
+const handler = NextAuth(authOptions);
 export { handler as GET, handler as POST };
