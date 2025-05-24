@@ -39,7 +39,7 @@ const NatureTypeSchema = new Schema<INatureType>(
 
 // Create index for faster queries
 NatureTypeSchema.index({ isActive: 1 });
-NatureTypeSchema.index({ name: 1 });
+// NatureTypeSchema.index({ name: 1 });
 
 const NatureType = mongoose.models.NatureType || mongoose.model<INatureType>('NatureType', NatureTypeSchema);
 

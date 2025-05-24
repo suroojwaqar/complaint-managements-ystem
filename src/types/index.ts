@@ -132,31 +132,4 @@ export interface PaginatedResponse<T = any> {
   };
 }
 
-// Session types (extending NextAuth)
-declare module "next-auth" {
-  interface Session {
-    user: {
-      id: string;
-      email: string;
-      name: string;
-      role: string;
-      department?: string;
-    }
-  }
-
-  interface User {
-    id: string;
-    email: string;
-    name: string;
-    role: string;
-    department?: string;
-  }
-}
-
-declare module "next-auth/jwt" {
-  interface JWT {
-    id: string;
-    role: string;
-    department?: string;
-  }
-}
+// NextAuth types are declared in types/next-auth.d.ts

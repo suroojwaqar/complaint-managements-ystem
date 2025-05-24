@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { SimpleThemeToggle } from '@/components/ui/theme-toggle';
+import { Suspense } from 'react';
 
 interface LoginFormData {
   email: string;
@@ -20,6 +21,14 @@ interface LoginFormData {
 }
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={<p>Loading...</p>}>
+      <LoginContent />
+    </Suspense>
+  );
+}
+
+function LoginContent() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
@@ -36,7 +45,7 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
-console.log('Submitting login form:', data);
+    console.log('Submitting login form:', data);
 
     try {
       const result = await signIn('credentials', {
@@ -47,7 +56,6 @@ console.log('Submitting login form:', data);
 
       console.log('Login result:', result);
       
-
       if (result?.error) {
         // Extract the specific error message from NextAuth
         const errorMessage = result.error;

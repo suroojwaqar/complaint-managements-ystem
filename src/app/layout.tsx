@@ -2,7 +2,6 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import AuthProvider from '@/components/providers/AuthProvider'
-import { ThemeProvider } from '@/components/providers/ThemeProvider'
 import LayoutWrapper from '@/components/layout/LayoutWrapper'
 import { Toaster } from '@/components/ui/sonner-toaster'
 
@@ -29,18 +28,12 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-        >
-          <AuthProvider>
-            <LayoutWrapper>
-              {children}
-            </LayoutWrapper>
-          </AuthProvider>
-          <Toaster />
-        </ThemeProvider>
+        <AuthProvider>
+          <LayoutWrapper>
+            {children}
+          </LayoutWrapper>
+        </AuthProvider>
+        <Toaster />
       </body>
     </html>
   )

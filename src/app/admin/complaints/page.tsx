@@ -196,8 +196,8 @@ export default function AdminComplaintsPage() {
 
     // Sort
     filtered.sort((a, b) => {
-      let aValue: string = '';
-      let bValue: string = '';
+      let aValue = '';
+      let bValue = '';
 
       if (sortBy === 'clientId') {
         aValue = a.clientId?.name || '';
@@ -213,11 +213,9 @@ export default function AdminComplaintsPage() {
         bValue = String(b[sortBy as keyof Complaint] || '');
       }
 
-      if (sortOrder === 'asc') {
-        return aValue.localeCompare(bValue);
-      } else {
-        return bValue.localeCompare(aValue);
-      }
+      return sortOrder === 'asc' 
+        ? aValue.localeCompare(bValue)
+        : bValue.localeCompare(aValue);
     });
 
     setFilteredComplaints(filtered);

@@ -122,12 +122,12 @@ const statusOptions = [
 ];
 
 const statusVariantMap = {
-  'New': 'secondary',
-  'Assigned': 'warning',
-  'In Progress': 'info',
-  'Completed': 'success',
-  'Done': 'success',
-  'Closed': 'default'
+  'New': 'new',
+  'Assigned': 'assigned',
+  'In Progress': 'in-progress',
+  'Completed': 'completed',
+  'Done': 'done',
+  'Closed': 'closed'
 };
 
 export default function EmployeeComplaintDetailPage() {

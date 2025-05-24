@@ -37,6 +37,7 @@ const UserSchema = new Schema<IUser>(
       type: String,
       required: [true, 'Password is required'],
       minlength: [6, 'Password should be at least 6 characters long'],
+      select: false, // Don't include password in queries by default
     },
     name: {
       type: String,
@@ -200,9 +201,7 @@ UserSchema.post(['findOneAndUpdate', 'updateOne', 'updateMany'], function(error:
   }
 });
 
-// Delete the User model if it's already defined (for development hot reloading)
-delete mongoose.models.User;
-
-const User = mongoose.model<IUser, IUserModel>('User', UserSchema);
+// Export model with proper handling for serverless
+const User = mongoose.models.User || mongoose.model<IUser, IUserModel>('User', UserSchema);
 
 export default User;

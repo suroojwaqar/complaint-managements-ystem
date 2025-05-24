@@ -130,11 +130,7 @@ ComplaintSchema.index({ department: 1 });
 ComplaintSchema.index({ currentAssigneeId: 1 });
 ComplaintSchema.index({ natureType: 1 });
 
-// Force delete any cached model and recreate
-if (mongoose.models.Complaint) {
-  delete mongoose.models.Complaint;
-}
-
-const Complaint = mongoose.model<IComplaint>('Complaint', ComplaintSchema);
+// Export model with proper handling for serverless
+const Complaint = mongoose.models.Complaint || mongoose.model<IComplaint>('Complaint', ComplaintSchema);
 
 export default Complaint;
