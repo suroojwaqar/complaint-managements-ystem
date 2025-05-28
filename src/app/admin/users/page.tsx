@@ -70,23 +70,41 @@ export default function UsersPage() {
   const fetchUsers = async () => {
     try {
       setLoading(true);
+      console.log('Fetching users...');
       // Fetch all users including inactive ones for admin management
       const response = await fetch('/api/users?includeInactive=true');
       
+      console.log('Response status:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
-        setUsers(data);
+        console.log('API response data:', data);
+        // Handle both wrapped ({ users: [...] }) and direct array responses
+        const usersArray = data.users || data;
+        console.log('Users array:', usersArray);
+        // Ensure data is an array
+        setUsers(Array.isArray(usersArray) ? usersArray : []);
       } else {
+        const errorText = await response.text();
+        console.error('API error:', response.status, errorText);
         toast.error('Failed to fetch users');
+        setUsers([]);
       }
     } catch (error) {
+      console.error('Fetch error:', error);
       toast.error('Error loading users');
+      setUsers([]);
     } finally {
       setLoading(false);
     }
   };
 
   const filterUsers = () => {
+    if (!Array.isArray(users)) {
+      setFilteredUsers([]);
+      return;
+    }
+
     let filtered = users;
 
     // Filter by search term
@@ -292,7 +310,7 @@ export default function UsersPage() {
     }
   };
 
-  const selectableUsers = filteredUsers.filter(user => user._id !== session?.user?.id);
+  const selectableUsers = Array.isArray(filteredUsers) ? filteredUsers.filter(user => user._id !== session?.user?.id) : [];
   const allSelectableSelected = selectableUsers.length > 0 && 
     selectableUsers.every(user => selectedUsers.has(user._id));
   const someSelected = selectedUsers.size > 0;
@@ -431,7 +449,7 @@ export default function UsersPage() {
             </Select>
             <div className="flex items-center justify-between">
               <Badge variant="outline" className="text-sm">
-                Total: {filteredUsers.length} users
+                Total: {Array.isArray(filteredUsers) ? filteredUsers.length : 0} users
               </Badge>
               {someSelected && (
                 <Badge variant="secondary" className="text-sm">
@@ -444,7 +462,7 @@ export default function UsersPage() {
       </Card>
 
       {/* Users Table */}
-      {filteredUsers.length === 0 ? (
+      {!Array.isArray(filteredUsers) || filteredUsers.length === 0 ? (
         <Card>
           <CardContent className="text-center py-12">
             <User className="mx-auto h-12 w-12 text-muted-foreground mb-4" />

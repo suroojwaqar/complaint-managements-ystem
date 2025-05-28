@@ -46,6 +46,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
+import CommentsSection from '@/components/CommentsSection';
 
 interface Complaint {
   _id: string;
@@ -545,6 +546,12 @@ export default function EmployeeComplaintDetailPage() {
                 </Button>
               </CardContent>
             </Card>
+
+            {/* Comments Section */}
+            <CommentsSection 
+              complaintId={complaint._id}
+              userRole={session?.user?.role || 'employee'}
+            />
           </div>
 
           {/* Right Column */}

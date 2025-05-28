@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import AssignDepartmentDialog from '@/components/admin/AssignDepartmentDialog';
+import EnhancedCommentSystem from '@/components/comments/EnhancedCommentSystem';
 
 interface Complaint {
   _id: string;
@@ -465,6 +466,9 @@ export default function AdminComplaintDetailPage() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Comments System */}
+            <EnhancedCommentSystem complaintId={complaint._id} />
           </div>
 
           {/* Sidebar */}

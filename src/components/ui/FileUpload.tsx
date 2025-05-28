@@ -126,7 +126,7 @@ export default function FileUpload({
       });
 
       console.log('Sending files to server...');
-      const response = await fetch('/api/upload', {
+      const response = await fetch('/api/upload/bulk', {
         method: 'POST',
         body: formData,
       });

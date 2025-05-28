@@ -38,10 +38,10 @@ export function isAuthenticated(
 }
 
 export function hasRole(
-  requiredRole: string,
-  handler: (req: NextRequest, context: { params: any }) => Promise<NextResponse>
+  requiredRole: string | string[],
+  handler: (req: NextRequest, context?: { params: any }) => Promise<NextResponse>
 ) {
-  return async (req: NextRequest, context: { params: any }) => {
+  return async (req: NextRequest, context?: { params: any }) => {
     const session = await getSession();
 
     if (!session?.user) {
@@ -50,11 +50,15 @@ export function hasRole(
 
     const userRole = session.user.role;
 
-    if (!hasRequiredRole(userRole, requiredRole)) {
+    // Handle array of required roles
+    const requiredRoles = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
+    const hasPermission = requiredRoles.some(role => hasRequiredRole(userRole, role));
+
+    if (!hasPermission) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    return handler(req, context);
+    return handler(req, context || { params: {} });
   };
 }
 

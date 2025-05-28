@@ -4,6 +4,8 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import dbConnect from '@/lib/mongodb';
 import Complaint from '@/models/Complaint';
 import ComplaintHistory from '@/models/ComplaintHistory';
+import whatsappService from '@/services/whatsappService';
+import { NotificationService } from '@/services/notificationService';
 
 export async function PATCH(
   request: NextRequest,
@@ -53,10 +55,37 @@ export async function PATCH(
     });
 
     const updatedComplaint = await Complaint.findById(complaintId)
-      .populate('clientId', 'name email')
+      .populate('clientId', 'name email phone')
       .populate('department', 'name')
-      .populate('currentAssigneeId', 'name email')
+      .populate('currentAssigneeId', 'name email phone')
       .populate('natureType', 'name description');
+
+    // Send WhatsApp notifications for status change (async, don't wait)
+    try {
+      console.log('Sending WhatsApp notifications for status change...');
+      const stakeholderPhones = await NotificationService.getComplaintStakeholderPhones(updatedComplaint);
+      const recipients = NotificationService.getNotificationRecipients(
+        'status_changed',
+        session.user.role,
+        stakeholderPhones
+      );
+      
+      // Send notification in background (don't await)
+      whatsappService.notifyStatusChanged(
+        updatedComplaint,
+        session.user,
+        oldStatus,
+        status,
+        recipients
+      ).catch(error => {
+        console.error('WhatsApp notification failed:', error);
+      });
+      
+      console.log(`WhatsApp notifications queued for ${recipients.length} recipients`);
+    } catch (notificationError) {
+      console.error('Error setting up WhatsApp notifications:', notificationError);
+      // Continue without notifications - don't fail the status update
+    }
 
     return NextResponse.json(updatedComplaint);
 

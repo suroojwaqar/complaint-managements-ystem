@@ -6,6 +6,8 @@ import Complaint from '@/models/Complaint';
 import Department from '@/models/Department';
 import User from '@/models/User';
 import ComplaintHistory from '@/models/ComplaintHistory';
+import whatsappService from '@/services/whatsappService';
+import { NotificationService } from '@/services/notificationService';
 
 interface Params {
   params: {
@@ -128,10 +130,37 @@ async function handleDepartmentReassignment(complaintId: string, body: any, curr
   
   // Return updated complaint
   const updatedComplaint = await Complaint.findById(complaintId)
-    .populate('clientId', 'name email')
+    .populate('clientId', 'name email phone')
     .populate('department', 'name')
-    .populate('currentAssigneeId', 'name email')
+    .populate('currentAssigneeId', 'name email phone')
     .populate('natureType', 'name description');
+  
+  // Send WhatsApp notifications for department reassignment (async, don't wait)
+  try {
+    console.log('Sending WhatsApp notifications for department reassignment...');
+    const stakeholderPhones = await NotificationService.getComplaintStakeholderPhones(updatedComplaint);
+    const recipients = NotificationService.getNotificationRecipients(
+      'reassigned',
+      currentUser.role,
+      stakeholderPhones
+    );
+    
+    // Send notification in background (don't await)
+    whatsappService.notifyComplaintAssigned(
+      updatedComplaint,
+      currentUser,
+      currentDepartmentName,
+      newDepartment.defaultAssigneeId.name,
+      recipients
+    ).catch(error => {
+      console.error('WhatsApp notification failed:', error);
+    });
+    
+    console.log(`WhatsApp notifications queued for ${recipients.length} recipients`);
+  } catch (notificationError) {
+    console.error('Error setting up WhatsApp notifications:', notificationError);
+    // Continue without notifications - don't fail the assignment
+  }
   
   return NextResponse.json({
     complaint: updatedComplaint,
@@ -206,10 +235,37 @@ async function handleUserAssignment(complaintId: string, body: any, currentUser:
   
   // Return updated complaint
   const updatedComplaint = await Complaint.findById(complaintId)
-    .populate('clientId', 'name email')
+    .populate('clientId', 'name email phone')
     .populate('department', 'name')
-    .populate('currentAssigneeId', 'name email')
+    .populate('currentAssigneeId', 'name email phone')
     .populate('natureType', 'name description');
+  
+  // Send WhatsApp notifications for user assignment (async, don't wait)
+  try {
+    console.log('Sending WhatsApp notifications for user assignment...');
+    const stakeholderPhones = await NotificationService.getComplaintStakeholderPhones(updatedComplaint);
+    const recipients = NotificationService.getNotificationRecipients(
+      'assigned',
+      currentUser.role,
+      stakeholderPhones
+    );
+    
+    // Send notification in background (don't await)
+    whatsappService.notifyComplaintAssigned(
+      updatedComplaint,
+      currentUser,
+      currentAssigneeName,
+      newAssignee.name,
+      recipients
+    ).catch(error => {
+      console.error('WhatsApp notification failed:', error);
+    });
+    
+    console.log(`WhatsApp notifications queued for ${recipients.length} recipients`);
+  } catch (notificationError) {
+    console.error('Error setting up WhatsApp notifications:', notificationError);
+    // Continue without notifications - don't fail the assignment
+  }
   
   return NextResponse.json({
     complaint: updatedComplaint,

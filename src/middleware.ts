@@ -48,10 +48,12 @@ export const config = {
     '/manager/:path*',
     '/employee/:path*',
     '/client/:path*',
+    '/profile/:path*',
     '/api/users/:path*',
     '/api/departments/:path*',
     '/api/complaints/:path*',
     '/api/nature-types/:path*',
     '/api/upload/:path*',
+    '/api/profile/:path*',
   ],
 };

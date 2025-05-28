@@ -43,6 +43,7 @@ import {
   BreadcrumbSeparator,
   BreadcrumbList,
 } from "@/components/ui/breadcrumb";
+import EnhancedCommentSystem from '@/components/comments/EnhancedCommentSystem';
 
 interface Complaint {
   _id: string;
@@ -512,6 +513,9 @@ export default function ManagerComplaintDetailPage() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Comments System */}
+            <EnhancedCommentSystem complaintId={complaint._id} />
           </div>
 
           {/* Sidebar */}

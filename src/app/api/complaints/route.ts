@@ -6,6 +6,8 @@ import Complaint from '@/models/Complaint';
 import Department from '@/models/Department';
 import NatureType from '@/models/NatureType';
 import ComplaintHistory from '@/models/ComplaintHistory';
+import whatsappService from '@/services/whatsappService';
+import { NotificationService } from '@/services/notificationService';
 
 // Get complaints based on user role and permissions
 export async function GET(request: NextRequest) {
@@ -185,6 +187,27 @@ export async function POST(request: NextRequest) {
         error: `Missing required fields: ${missingFields.join(', ')}` 
       }, { status: 400 });
     }
+
+    // Handle creating complaint on behalf of client (Admin/Manager only)
+    let clientId = currentUser.id;
+    let createdOnBehalf = false;
+    
+    if (body.clientId && (currentUser.role === 'admin' || currentUser.role === 'manager')) {
+      // Verify the client exists
+      const client = await require('@/models/User').default.findOne({
+        _id: body.clientId,
+        role: 'client',
+        isActive: true
+      });
+      
+      if (!client) {
+        return NextResponse.json({ error: 'Invalid client selected' }, { status: 400 });
+      }
+      
+      clientId = body.clientId;
+      createdOnBehalf = true;
+      console.log(`${currentUser.role} creating complaint on behalf of client:`, client.name);
+    }
     
     // Verify nature type exists and is active
     const natureType = await NatureType.findOne({
@@ -300,7 +323,7 @@ export async function POST(request: NextRequest) {
       natureType: body.natureType,
       remark: body.remark?.trim() || '',
       attachments: processedAttachments,
-      clientId: currentUser.id,
+      clientId: clientId,
       department: assignedDepartment._id,
       status: 'New',
       currentAssigneeId: defaultAssigneeId,
@@ -317,27 +340,59 @@ export async function POST(request: NextRequest) {
       complaintId: complaint._id,
       status: 'New',
       assignedTo: defaultAssigneeId,
-      notes: `Complaint created and auto-assigned to ${assignedDepartment.name} department manager. Nature Type: ${natureType.name}`
+      notes: createdOnBehalf 
+        ? `Complaint created by ${currentUser.role} (${currentUser.name}) on behalf of client and auto-assigned to ${assignedDepartment.name} department manager. Nature Type: ${natureType.name}`
+        : `Complaint created and auto-assigned to ${assignedDepartment.name} department manager. Nature Type: ${natureType.name}`
     });
     console.log('Complaint history created');
     
-    // Return populated complaint
+    // Get populated complaint for WhatsApp notification
+    let populatedComplaint;
     try {
-      const populatedComplaint = await Complaint.findById(complaint._id)
-        .populate('clientId', 'name email')
+      populatedComplaint = await Complaint.findById(complaint._id)
+        .populate('clientId', 'name email phone')
         .populate('department', 'name')
-        .populate('currentAssigneeId', 'name email')
+        .populate('currentAssigneeId', 'name email phone')
         .populate('natureType', 'name description')
         .populate('attachments.uploadedBy', 'name');
+    } catch (populationError) {
+      console.error('Failed to populate created complaint:', populationError);
+      populatedComplaint = complaint;
+    }
+    
+    // Send WhatsApp notifications (async, don't wait for completion)
+    try {
+      console.log('Sending WhatsApp notifications for new complaint...');
+      const stakeholderPhones = await NotificationService.getComplaintStakeholderPhones(populatedComplaint);
+      const recipients = NotificationService.getNotificationRecipients(
+        'created',
+        currentUser.role,
+        stakeholderPhones
+      );
       
+      // Send notification in background (don't await)
+      whatsappService.notifyComplaintCreated(
+        populatedComplaint,
+        currentUser,
+        stakeholderPhones.assignee || undefined,
+        recipients
+      ).catch(error => {
+        console.error('WhatsApp notification failed:', error);
+      });
+      
+      console.log(`WhatsApp notifications queued for ${recipients.length} recipients`);
+    } catch (notificationError) {
+      console.error('Error setting up WhatsApp notifications:', notificationError);
+      // Continue without notifications - don't fail the complaint creation
+    }
+    
+    // Return populated complaint
+    if (populatedComplaint && populatedComplaint.toObject) {
       return NextResponse.json({
         ...populatedComplaint.toObject(),
         message: `Complaint submitted successfully and assigned to ${assignedDepartment.name} department manager`
       }, { status: 201 });
-    } catch (populationError) {
-      console.error('Failed to populate created complaint:', populationError);
-      
-      // Return without population if that fails
+    } else {
       return NextResponse.json({
         ...complaint.toObject(),
         message: `Complaint created successfully and assigned to ${assignedDepartment.name} department manager`

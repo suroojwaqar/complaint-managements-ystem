@@ -73,6 +73,11 @@ const menuItems = {
         },
       ],
     },
+    {
+      title: 'Profile',
+      icon: User,
+      href: '/profile',
+    },
   ],
   manager: [
     {
@@ -90,6 +95,11 @@ const menuItems = {
       icon: Users,
       href: '/manager/team',
     },
+    {
+      title: 'Profile',
+      icon: User,
+      href: '/profile',
+    },
   ],
   employee: [
     {
@@ -102,6 +112,11 @@ const menuItems = {
       icon: FileText,
       href: '/employee/complaints',
     },
+    {
+      title: 'Profile',
+      icon: User,
+      href: '/profile',
+    },
   ],
   client: [
     {
@@ -113,6 +128,11 @@ const menuItems = {
       title: 'My Complaints',
       icon: FileText,
       href: '/client/complaints',
+    },
+    {
+      title: 'Profile',
+      icon: User,
+      href: '/profile',
     },
   ],
 };
@@ -302,9 +322,9 @@ export default function DashboardLayout({ children }: SidebarProps) {
             
             {/* User menu */}
             <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium">
+              <Link href="/profile" className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium hover:bg-primary/90 transition-colors">
                 {session?.user?.name?.charAt(0) || 'U'}
-              </div>
+              </Link>
               <div className="hidden sm:block">
                 <span className="text-sm font-medium">
                   {session?.user?.name || 'User'}

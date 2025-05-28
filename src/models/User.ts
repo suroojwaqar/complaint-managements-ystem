@@ -8,6 +8,15 @@ export interface IUser extends Document {
   role: 'client' | 'employee' | 'manager' | 'admin';
   department?: mongoose.Types.ObjectId;
   isActive: boolean;
+  phone?: string;
+  address?: string;
+  bio?: string;
+  profileImage?: string;
+  notifications: {
+    email: boolean;
+    whatsapp: boolean;
+    system: boolean;
+  };
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -72,6 +81,37 @@ const UserSchema = new Schema<IUser>(
     isActive: {
       type: Boolean,
       default: true,
+    },
+    phone: {
+      type: String,
+      trim: true,
+    },
+    address: {
+      type: String,
+      trim: true,
+    },
+    bio: {
+      type: String,
+      trim: true,
+      maxlength: [500, 'Bio cannot exceed 500 characters']
+    },
+    profileImage: {
+      type: String,
+      trim: true,
+    },
+    notifications: {
+      email: {
+        type: Boolean,
+        default: true,
+      },
+      whatsapp: {
+        type: Boolean,
+        default: false,
+      },
+      system: {
+        type: Boolean,
+        default: true,
+      },
     },
   },
   {

@@ -33,103 +33,89 @@ export async function POST(request: NextRequest) {
     console.log('File upload request from user:', session.user.id);
 
     const formData = await request.formData();
-    const files = formData.getAll('files') as File[];
+    const file = formData.get('file') as File;
+    const type = formData.get('type') as string; // 'profile' or 'complaint'
 
-    if (!files || files.length === 0) {
+    if (!file) {
       return NextResponse.json(
-        { error: 'No files provided' },
+        { error: 'No file provided' },
         { status: 400 }
       );
     }
 
-    if (files.length > 5) {
+    console.log(`Processing file: ${file.name}, size: ${file.size}, type: ${file.type}`);
+
+    // For profile images, only allow images
+    const allowedTypes = type === 'profile' 
+      ? ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+      : ALLOWED_TYPES;
+
+    // Validate file type
+    if (!allowedTypes.includes(file.type)) {
+      const typeDescription = type === 'profile' ? 'images (JPEG, PNG, GIF, WebP)' : 'images, PDF, Word, Excel, and text files';
       return NextResponse.json(
-        { error: 'Maximum 5 files allowed per upload' },
+        { error: `Unsupported file type. Allowed types: ${typeDescription}.` },
         { status: 400 }
       );
     }
 
-    console.log(`Processing ${files.length} files`);
+    // Validate file size (5MB for profile images, 10MB for others)
+    const maxSize = type === 'profile' ? 5 * 1024 * 1024 : MAX_FILE_SIZE;
+    if (file.size > maxSize) {
+      const sizeLimit = type === 'profile' ? '5MB' : '10MB';
+      return NextResponse.json(
+        { error: `File size exceeds ${sizeLimit} limit.` },
+        { status: 400 }
+      );
+    }
 
-    const uploadResults = [];
-    const errors = [];
-
-    // Create upload directory if it doesn't exist
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'complaints');
+    // Create appropriate upload directory
+    const uploadSubDir = type === 'profile' ? 'profiles' : 'complaints';
+    const uploadDir = path.join(process.cwd(), 'public', 'uploads', uploadSubDir);
+    
     try {
       await mkdir(uploadDir, { recursive: true });
     } catch (mkdirError) {
       console.log('Upload directory already exists or created successfully');
     }
 
-    for (const file of files) {
-      try {
-        console.log(`Processing file: ${file.name}, size: ${file.size}, type: ${file.type}`);
+    // Generate unique filename
+    const fileExtension = path.extname(file.name);
+    const fileNameWithoutExt = path.basename(file.name, fileExtension);
+    const uniqueFilename = `${fileNameWithoutExt}_${crypto.randomUUID()}${fileExtension}`;
+    
+    // Create file path
+    const filePath = path.join(uploadDir, uniqueFilename);
+    
+    console.log(`Saving file to: ${filePath}`);
 
-        // Validate file type
-        if (!ALLOWED_TYPES.includes(file.type)) {
-          errors.push(`File "${file.name}": Unsupported file type. Allowed types: images, PDF, Word, Excel, and text files.`);
-          continue;
-        }
+    // Convert file to buffer and save
+    const buffer = Buffer.from(await file.arrayBuffer());
+    await writeFile(filePath, buffer);
 
-        // Validate file size
-        if (file.size > MAX_FILE_SIZE) {
-          errors.push(`File "${file.name}": File size exceeds 10MB limit.`);
-          continue;
-        }
+    // Generate file URL (accessible via Next.js public folder)
+    const fileUrl = `/uploads/${uploadSubDir}/${uniqueFilename}`;
 
-        // Generate unique filename
-        const fileExtension = path.extname(file.name);
-        const fileNameWithoutExt = path.basename(file.name, fileExtension);
-        const uniqueFilename = `${fileNameWithoutExt}_${crypto.randomUUID()}${fileExtension}`;
-        
-        // Create file path
-        const filePath = path.join(uploadDir, uniqueFilename);
-        
-        console.log(`Saving file to: ${filePath}`);
+    console.log(`File saved successfully: ${uniqueFilename}`);
 
-        // Convert file to buffer and save
-        const buffer = Buffer.from(await file.arrayBuffer());
-        await writeFile(filePath, buffer);
+    const result = {
+      filename: uniqueFilename,
+      originalName: file.name,
+      mimeType: file.type,
+      size: file.size,
+      url: fileUrl,
+      uploadedAt: new Date(),
+      uploadedBy: session.user.id,
+      localPath: filePath
+    };
 
-        // Generate file URL (accessible via Next.js public folder)
-        const fileUrl = `/uploads/complaints/${uniqueFilename}`;
-
-        console.log(`File saved successfully: ${uniqueFilename}`);
-
-        uploadResults.push({
-          filename: uniqueFilename,
-          originalName: file.name,
-          mimeType: file.type,
-          size: file.size,
-          url: fileUrl,
-          uploadedAt: new Date(),
-          uploadedBy: session.user.id,
-          localPath: filePath
-        });
-      } catch (uploadError) {
-        console.error(`Error uploading file ${file.name}:`, uploadError);
-        errors.push(`File "${file.name}": Upload failed. ${uploadError instanceof Error ? uploadError.message : 'Unknown error'}`);
-      }
-    }
-
-    if (uploadResults.length === 0) {
-      return NextResponse.json(
-        { 
-          error: 'No files were uploaded successfully',
-          errors: errors 
-        },
-        { status: 400 }
-      );
-    }
-
-    console.log(`Successfully uploaded ${uploadResults.length} files`);
+    console.log(`Successfully uploaded file: ${uniqueFilename}`);
 
     return NextResponse.json(
       { 
-        message: `Successfully uploaded ${uploadResults.length} file(s)`,
-        files: uploadResults,
-        errors: errors.length > 0 ? errors : undefined
+        message: 'File uploaded successfully',
+        file: result,
+        url: fileUrl // For easy access
       },
       { status: 200 }
     );

@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import Link from 'next/link';
+import CommentsSection from '@/components/CommentsSection';
 import {
   ArrowLeftIcon,
   CalendarIcon,
@@ -84,6 +86,7 @@ interface HistoryEntry {
 }
 
 export default function ComplaintDetailPage() {
+  const { data: session } = useSession();
   const params = useParams();
   const [complaint, setComplaint] = useState<Complaint | null>(null);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
@@ -387,6 +390,12 @@ export default function ComplaintDetailPage() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Comments Section */}
+            <CommentsSection 
+              complaintId={complaint._id}
+              userRole={session?.user?.role || 'client'}
+            />
           </div>
 
           {/* Sidebar */}

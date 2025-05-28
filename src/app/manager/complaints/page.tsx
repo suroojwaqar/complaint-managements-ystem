@@ -212,6 +212,12 @@ export default function ManagerComplaintsPage() {
             </div>
             <div className="flex items-center space-x-4">
               <button
+                onClick={() => window.location.href = '/manager/complaints/create-on-behalf'}
+                className="px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700"
+              >
+                Create on Behalf
+              </button>
+              <button
                 onClick={() => window.location.href = '/manager/dashboard'}
                 className="px-4 py-2 text-blue-600 bg-blue-50 rounded-md hover:bg-blue-100"
               >

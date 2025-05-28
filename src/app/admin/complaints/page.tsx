@@ -370,9 +370,11 @@ export default function AdminComplaintsPage() {
               <Download className="h-4 w-4 mr-2" />
               Export
             </Button>
-            <Button size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              New Complaint
+            <Button size="sm" asChild>
+              <Link href="/admin/complaints/create-on-behalf">
+                <Plus className="h-4 w-4 mr-2" />
+                Create on Behalf
+              </Link>
             </Button>
           </div>
         </div>

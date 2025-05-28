@@ -3,7 +3,7 @@ import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
 import { hasRole, handleApiError } from '@/lib/api-utils';
 
-export const GET = hasRole('admin', async (req: NextRequest) => {
+export const GET = hasRole(['admin', 'manager'], async (req: NextRequest) => {
   try {
     await dbConnect();
     
@@ -26,7 +26,7 @@ export const GET = hasRole('admin', async (req: NextRequest) => {
       .populate('department', 'name')
       .sort({ createdAt: -1 });
       
-    return NextResponse.json(users);
+    return NextResponse.json({ users });
   } catch (error) {
     return handleApiError(error);
   }
