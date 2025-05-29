@@ -32,10 +32,10 @@ export async function GET(req: NextRequest, { params }: Params) {
     // Step 3: Fetch complaint with basic population first
     console.log('Fetching complaint...');
     const complaint = await Complaint.findById(params.id)
-      .populate('clientId', 'name email')
+      .populate('clientId', 'name email profileImage')
       .populate('department', 'name')
-      .populate('currentAssigneeId', 'name email')
-      .populate('firstAssigneeId', 'name email')
+      .populate('currentAssigneeId', 'name email profileImage')
+      .populate('firstAssigneeId', 'name email profileImage')
       .populate('natureType', 'name description');
       
     if (!complaint) {
@@ -172,9 +172,9 @@ export async function PUT(req: NextRequest, { params }: Params) {
       { $set: body },
       { new: true, runValidators: true }
     )
-    .populate('clientId', 'name email')
+    .populate('clientId', 'name email profileImage')
     .populate('department', 'name')
-    .populate('currentAssigneeId', 'name email')
+    .populate('currentAssigneeId', 'name email profileImage')
     .populate('natureType', 'name description');
     
     console.log('Complaint updated successfully');

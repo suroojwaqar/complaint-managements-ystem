@@ -20,31 +20,50 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Get team members based on user role
-    let query = { isActive: true };
+    let teamMembers = [];
     
-    // If user is a manager (not admin), they can only see their department
+    // If user is a manager (not admin), get their team + other department managers
     if (session.user.role === 'manager' && session.user.department) {
-      console.log('Manager filtering for department:', session.user.department);
-      query = {
-        ...query,
+      console.log('Manager filtering for user ID:', session.user.id, 'department:', session.user.department);
+      
+      // Get employees from their own department (excluding themselves)
+      const ownTeamMembers = await User.find({
+        isActive: true,
         department: session.user.department,
-        role: { $in: ['employee', 'manager'] } // Only employees and managers from same department
-      };
+        role: 'employee', // Only employees from same department
+        _id: { $ne: session.user.id } // Exclude current user
+      })
+      .select('name email role department isActive createdAt updatedAt lastActive profileImage')
+      .populate('department', 'name description')
+      .sort({ name: 1 });
+      
+      // Get managers from OTHER departments (cross-department collaboration)
+      const otherDepartmentManagers = await User.find({
+        isActive: true,
+        role: 'manager',
+        department: { $ne: session.user.department }, // Different departments only
+        _id: { $ne: session.user.id } // Exclude current user (redundant but safe)
+      })
+      .select('name email role department isActive createdAt updatedAt lastActive profileImage')
+      .populate('department', 'name description')
+      .sort({ 'department.name': 1, name: 1 });
+      
+      // Combine both arrays
+      teamMembers = [...ownTeamMembers, ...otherDepartmentManagers];
+      
+      console.log(`Found ${ownTeamMembers.length} team members + ${otherDepartmentManagers.length} cross-department managers`);
+      
     } else if (session.user.role === 'admin') {
       // Admins can see all active users except other admins for assignment purposes
-      query = {
-        ...query,
-        role: { $in: ['employee', 'manager'] }
-      };
-    }
-
-    // Get team members with department info
-    console.log('Team query:', JSON.stringify(query));
-    const teamMembers = await User.find(query)
-      .select('name email role department isActive createdAt updatedAt lastActive')
+      teamMembers = await User.find({
+        isActive: true,
+        role: { $in: ['employee', 'manager'] },
+        _id: { $ne: session.user.id } // Exclude current admin
+      })
+      .select('name email role department isActive createdAt updatedAt lastActive profileImage')
       .populate('department', 'name description')
       .sort({ department: 1, role: 1, name: 1 });
+    }
     
     console.log(`Found ${teamMembers.length} team members for ${session.user.role}:`, 
                 teamMembers.map(m => ({ name: m.name, role: m.role, dept: m.department?.name })));

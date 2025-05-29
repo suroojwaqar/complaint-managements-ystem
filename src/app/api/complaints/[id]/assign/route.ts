@@ -199,11 +199,22 @@ async function handleUserAssignment(complaintId: string, body: any, currentUser:
     const complaintDepartment = complaint.department.toString();
     const assigneeDepartment = newAssignee.department._id.toString();
     
-    // Manager can only assign within their department
-    if (userDepartment !== complaintDepartment || userDepartment !== assigneeDepartment) {
-      console.log('ERROR: Manager can only assign within their department');
+    // Manager can assign within their department OR to other department managers
+    const isAssigningWithinDepartment = userDepartment === assigneeDepartment;
+    const isAssigningToOtherManager = newAssignee.role === 'manager' && userDepartment !== assigneeDepartment;
+    const isComplaintInTheirDepartment = userDepartment === complaintDepartment;
+    
+    if (!isComplaintInTheirDepartment) {
+      console.log('ERROR: Manager can only manage complaints from their department');
       return NextResponse.json({ 
-        error: 'You can only assign complaints to users within your department' 
+        error: 'You can only assign complaints from your department' 
+      }, { status: 403 });
+    }
+    
+    if (!isAssigningWithinDepartment && !isAssigningToOtherManager) {
+      console.log('ERROR: Manager can only assign to team members or other department managers');
+      return NextResponse.json({ 
+        error: 'You can only assign complaints to your team members or other department managers' 
       }, { status: 403 });
     }
   }
@@ -219,8 +230,16 @@ async function handleUserAssignment(complaintId: string, body: any, currentUser:
   await complaint.save();
   console.log('SUCCESS: Complaint assignee updated');
   
-  // Create history entry
-  const historyNote = notes || `Complaint reassigned from ${currentAssigneeName} to ${newAssignee.name}`;
+  // Create history entry with department info for cross-department assignments
+  let historyNote = notes;
+  if (!historyNote) {
+    const isCrossDepartment = currentUser.department !== newAssignee.department._id.toString();
+    if (isCrossDepartment) {
+      historyNote = `Complaint reassigned from ${currentAssigneeName} to ${newAssignee.name} (${newAssignee.department.name} Department)`;
+    } else {
+      historyNote = `Complaint reassigned from ${currentAssigneeName} to ${newAssignee.name}`;
+    }
+  }
   
   await ComplaintHistory.create({
     complaintId: complaintId,
@@ -267,12 +286,19 @@ async function handleUserAssignment(complaintId: string, body: any, currentUser:
     // Continue without notifications - don't fail the assignment
   }
   
+  // Success message with department info for cross-department assignments
+  const isCrossDepartment = currentUser.department !== newAssignee.department._id.toString();
+  const successMessage = isCrossDepartment 
+    ? `Complaint successfully assigned to ${newAssignee.name} (${newAssignee.department.name} Department)`
+    : `Complaint successfully assigned to ${newAssignee.name}`;
+  
   return NextResponse.json({
     complaint: updatedComplaint,
-    message: `Complaint successfully assigned to ${newAssignee.name}`,
+    message: successMessage,
     newAssignee: {
       name: newAssignee.name,
-      email: newAssignee.email
+      email: newAssignee.email,
+      department: newAssignee.department.name
     }
   });
 }

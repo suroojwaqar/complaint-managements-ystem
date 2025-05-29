@@ -8,7 +8,7 @@ import { toast } from '@/lib/toast';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -36,6 +36,7 @@ interface Comment {
     name: string;
     email: string;
     role: string;
+    profileImage?: string | null;
   };
   attachments?: Array<{
     filename: string;
@@ -82,6 +83,9 @@ export default function EnhancedCommentSystem({
       
       if (response.ok) {
         const data = await response.json();
+        console.log('=== COMMENTS DEBUG ===');
+        console.log('Comments data:', data.comments);
+        console.log('First comment author:', data.comments[0]?.author);
         setComments(data.comments || []);
       } else {
         toast.error('Failed to load comments');
@@ -290,11 +294,20 @@ export default function EnhancedCommentSystem({
                       {/* Comment Header */}
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center gap-3">
-                          <Avatar className="h-8 w-8">
-                            <AvatarFallback className="text-sm">
-                              {comment.author.name.charAt(0).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
+                          <UserAvatar 
+                            user={{
+                              name: comment.author.name,
+                              profileImage: comment.author.profileImage,
+                              email: comment.author.email
+                            }}
+                            size="sm"
+                          />
+                          {/* Debug logging */}
+                          {console.log('Comment author data:', {
+                            name: comment.author.name,
+                            profileImage: comment.author.profileImage,
+                            email: comment.author.email
+                          })}
                           <div>
                             <div className="flex items-center gap-2">
                               <span className="font-medium text-sm">

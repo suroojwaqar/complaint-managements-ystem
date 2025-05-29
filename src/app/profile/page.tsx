@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
@@ -37,6 +38,7 @@ interface UserProfile {
 
 export default function ProfilePage() {
   const { data: session } = useSession();
+  const { refreshProfile } = useCurrentUser();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -82,6 +84,8 @@ export default function ProfilePage() {
 
     try {
       setSaving(true);
+      console.log('Uploading profile image...');
+      
       const response = await fetch('/api/upload', {
         method: 'POST',
         body: formData,
@@ -89,6 +93,7 @@ export default function ProfilePage() {
 
       if (response.ok) {
         const data = await response.json();
+        console.log('Upload successful:', data);
         
         // Update profile with new image URL
         const updateResponse = await fetch('/api/profile', {
@@ -98,13 +103,23 @@ export default function ProfilePage() {
         });
         
         if (updateResponse.ok) {
+          const updatedProfile = await updateResponse.json();
+          console.log('Profile updated:', updatedProfile);
+          
           setProfile(prev => prev ? { ...prev, profileImage: data.url } : null);
+          
+          // Refresh the user data to update header immediately
+          refreshProfile();
+          
           toast.success('Profile image updated successfully');
         } else {
+          const errorData = await updateResponse.json();
+          console.error('Profile update failed:', errorData);
           toast.error('Failed to save profile image');
         }
       } else {
         const errorData = await response.json();
+        console.error('Upload failed:', errorData);
         toast.error(errorData.error || 'Failed to upload image');
       }
     } catch (error) {
@@ -225,16 +240,14 @@ export default function ProfilePage() {
               {/* Profile Image Section */}
               <div className="flex items-center space-x-6">
                 <div className="relative">
-                  <Avatar className="h-24 w-24">
-                    <AvatarImage 
-                      src={profile.profileImage || ''} 
-                      alt={profile.name}
-                      className="object-cover"
-                    />
-                    <AvatarFallback className="text-lg">
-                      {profile.name.split(' ').map(n => n[0]).join('')}
-                    </AvatarFallback>
-                  </Avatar>
+                  <UserAvatar 
+                    user={{
+                      name: profile.name,
+                      profileImage: profile.profileImage,
+                      email: profile.email
+                    }}
+                    size="2xl"
+                  />
                   <label 
                     htmlFor="profile-image" 
                     className="absolute -bottom-2 -right-2 bg-primary text-primary-foreground rounded-full p-2 cursor-pointer hover:bg-primary/90 transition-colors"

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { usePathname } from 'next/navigation';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 import Link from 'next/link';
 import {
   LayoutDashboard,
@@ -23,6 +24,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import { cn } from '@/lib/utils';
 
 interface SidebarProps {
@@ -194,6 +196,7 @@ function SidebarItem({ item, isCollapsed, level = 0 }: any) {
 
 export default function DashboardLayout({ children }: SidebarProps) {
   const { data: session } = useSession();
+  const { user: currentUser } = useCurrentUser();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const pathname = usePathname();
@@ -322,15 +325,23 @@ export default function DashboardLayout({ children }: SidebarProps) {
             
             {/* User menu */}
             <div className="flex items-center gap-3">
-              <Link href="/profile" className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium hover:bg-primary/90 transition-colors">
-                {session?.user?.name?.charAt(0) || 'U'}
+              <Link href="/profile" className="hover:opacity-80 transition-opacity">
+                <UserAvatar 
+                  user={{
+                    name: currentUser?.name || 'User',
+                    profileImage: currentUser?.profileImage,
+                    email: currentUser?.email || ''
+                  }}
+                  size="sm"
+                  showTooltip
+                />
               </Link>
               <div className="hidden sm:block">
                 <span className="text-sm font-medium">
-                  {session?.user?.name || 'User'}
+                  {currentUser?.name || 'User'}
                 </span>
                 <Badge variant="secondary" className="ml-2 text-xs">
-                  {session?.user?.role || 'guest'}
+                  {currentUser?.role || 'guest'}
                 </Badge>
               </div>
             </div>

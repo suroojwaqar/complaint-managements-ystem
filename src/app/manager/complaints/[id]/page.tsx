@@ -36,6 +36,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
+import { UserAvatar, UserAvatarWithName } from '@/components/ui/user-avatar';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -59,11 +60,13 @@ interface Complaint {
     _id: string;
     name: string;
     email: string;
+    profileImage?: string | null;
   };
   firstAssigneeId: {
     _id: string;
     name: string;
     email: string;
+    profileImage?: string | null;
   };
   department: {
     _id: string;
@@ -87,6 +90,7 @@ interface TeamMember {
   name: string;
   email: string;
   role: string;
+  profileImage?: string | null;
   department: {
     _id: string;
     name: string;
@@ -527,9 +531,14 @@ export default function ManagerComplaintDetailPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center gap-4">
-                  <div className="bg-muted p-2 rounded-lg">
-                    <UserCheck className="h-5 w-5" />
-                  </div>
+                  <UserAvatar 
+                    user={{
+                      name: complaint.currentAssigneeId?.name || 'Unassigned',
+                      profileImage: complaint.currentAssigneeId?.profileImage,
+                      email: complaint.currentAssigneeId?.email
+                    }}
+                    size="md"
+                  />
                   <div>
                     <p className="text-sm text-muted-foreground">Assigned To</p>
                     <p className="font-medium">{complaint.currentAssigneeId?.name || 'Unassigned'}</p>
@@ -633,11 +642,81 @@ export default function ManagerComplaintDetailPage() {
                           <SelectValue placeholder="Select team member" />
                         </SelectTrigger>
                         <SelectContent>
-                          {teamMembers.map((member) => (
-                            <SelectItem key={member._id} value={member._id}>
-                              {member.name} - {member.department?.name || 'No Dept'}
-                            </SelectItem>
-                          ))}
+                          {(() => {
+                            // Separate team members and cross-department managers
+                            const ownTeam = teamMembers.filter(member => 
+                              member.department?._id === session?.user?.department
+                            );
+                            const crossDeptManagers = teamMembers.filter(member => 
+                              member.role === 'manager' && member.department?._id !== session?.user?.department
+                            );
+                            
+                            return (
+                              <>
+                                {ownTeam.length > 0 && (
+                                  <>
+                                    <div className="px-2 py-1 text-xs font-semibold text-muted-foreground border-b">
+                                      My Team Members
+                                    </div>
+                                    {ownTeam.map((member) => (
+                                      <SelectItem key={member._id} value={member._id}>
+                                        <div className="flex items-center justify-between w-full">
+                                          <div className="flex items-center gap-2">
+                                            <UserAvatar 
+                                              user={{
+                                                name: member.name,
+                                                profileImage: member.profileImage,
+                                                email: member.email
+                                              }}
+                                              size="xs"
+                                            />
+                                            <span>{member.name}</span>
+                                          </div>
+                                          <Badge variant="outline" className="text-xs bg-green-50 text-green-700 ml-2">
+                                            {member.role === 'employee' ? 'Employee' : 'Manager'}
+                                          </Badge>
+                                        </div>
+                                      </SelectItem>
+                                    ))}
+                                  </>
+                                )}
+                                {crossDeptManagers.length > 0 && (
+                                  <>
+                                    <div className="px-2 py-1 text-xs font-semibold text-muted-foreground border-b mt-2">
+                                      Other Department Managers
+                                    </div>
+                                    {crossDeptManagers.map((member) => (
+                                      <SelectItem key={member._id} value={member._id}>
+                                        <div className="flex items-center justify-between w-full">
+                                          <div className="flex items-center gap-2">
+                                            <UserAvatar 
+                                              user={{
+                                                name: member.name,
+                                                profileImage: member.profileImage,
+                                                email: member.email
+                                              }}
+                                              size="xs"
+                                            />
+                                            <span>{member.name}</span>
+                                          </div>
+                                          <div className="flex items-center gap-2 ml-2">
+                                            <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700">
+                                              {member.department?.name || 'No Dept'}
+                                            </Badge>
+                                          </div>
+                                        </div>
+                                      </SelectItem>
+                                    ))}
+                                  </>
+                                )}
+                                {ownTeam.length === 0 && crossDeptManagers.length === 0 && (
+                                  <div className="px-2 py-4 text-center text-muted-foreground text-sm">
+                                    No team members or managers available for assignment
+                                  </div>
+                                )}
+                              </>
+                            );
+                          })()}
                         </SelectContent>
                       </Select>
                     </div>

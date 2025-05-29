@@ -42,7 +42,7 @@ export async function GET(
 
     // Get comments with populated author information
     const comments = await Comment.find({ complaintId })
-      .populate('author', 'name email role')
+      .populate('author', 'name email role profileImage')
       .populate('attachments.uploadedBy', 'name')
       .sort({ createdAt: -1 });
 
@@ -118,7 +118,7 @@ export async function POST(
 
     // Populate the created comment for response
     const populatedComment = await Comment.findById(comment._id)
-      .populate('author', 'name email role')
+      .populate('author', 'name email role profileImage')
       .populate('attachments.uploadedBy', 'name');
 
     // Get populated complaint for WhatsApp notifications
