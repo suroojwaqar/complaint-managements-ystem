@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import Comment from '@/models/Comment';
 import Complaint from '@/models/Complaint';
@@ -177,7 +177,7 @@ export async function POST(
       console.log('=== WHATSAPP NOTIFICATION DEBUG END ===\n');
     } catch (notificationError) {
       console.error('\u274c Error setting up WhatsApp notifications:', notificationError);
-      console.error('Notification error stack:', notificationError.stack);
+      console.error('Notification error stack:', notificationError instanceof Error ? notificationError.stack : 'No stack trace available');
       // Continue without notifications - don't fail the comment creation
     }
 

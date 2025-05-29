@@ -301,7 +301,7 @@ export default function CreateDepartmentPage() {
             ) : (
               <div className="space-y-6">
                 {managers.length === 0 && (
-                  <Alert variant="warning" className="bg-amber-50 text-amber-800 border-amber-200">
+                  <Alert className="bg-amber-50 text-amber-800 border-amber-200">
                     <AlertTriangle className="h-4 w-4 text-amber-600" />
                     <AlertTitle>No managers available</AlertTitle>
                     <AlertDescription>

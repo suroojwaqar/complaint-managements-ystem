@@ -2,14 +2,24 @@
 
 import { useState } from 'react';
 
+interface TestResult {
+  status: number | string;
+  data: any;
+  error: string | null;
+}
+
+interface TestResults {
+  [endpoint: string]: TestResult;
+}
+
 export default function DebugPage() {
-  const [results, setResults] = useState<any>({});
+  const [results, setResults] = useState<TestResults>({});
 
   const testEndpoint = async (endpoint: string, method: string = 'GET') => {
     try {
       const response = await fetch(endpoint, { method });
       const data = await response.json();
-      setResults(prev => ({
+      setResults((prev: TestResults) => ({
         ...prev,
         [endpoint]: {
           status: response.status,
@@ -18,7 +28,7 @@ export default function DebugPage() {
         }
       }));
     } catch (error) {
-      setResults(prev => ({
+      setResults((prev: TestResults) => ({
         ...prev,
         [endpoint]: {
           status: 'Network Error',
@@ -58,7 +68,7 @@ export default function DebugPage() {
               {results[endpoint] && (
                 <div className="bg-gray-100 p-4 rounded">
                   <p className="font-medium mb-2">
-                    Status: <span className={results[endpoint].status < 400 ? 'text-green-600' : 'text-red-600'}>
+                    Status: <span className={typeof results[endpoint].status === 'number' && results[endpoint].status < 400 ? 'text-green-600' : 'text-red-600'}>
                       {results[endpoint].status}
                     </span>
                   </p>

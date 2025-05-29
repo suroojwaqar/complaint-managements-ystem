@@ -242,8 +242,8 @@ export default function AdminComplaintsPage() {
     }
   };
 
-  const getStatusVariant = (status: string): string => {
-    const statusVariants: Record<string, string> = {
+  const getStatusVariant = (status: string): 'default' | 'secondary' | 'destructive' | 'outline' | 'new' | 'assigned' | 'in-progress' | 'completed' | 'done' | 'closed' => {
+    const statusVariants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline' | 'new' | 'assigned' | 'in-progress' | 'completed' | 'done' | 'closed'> = {
       'New': 'new',
       'Assigned': 'assigned',
       'In Progress': 'in-progress',

@@ -122,15 +122,6 @@ const statusOptions = [
   { value: 'Completed', label: 'Completed', color: 'bg-green-100 text-green-800' },
 ];
 
-const statusVariantMap = {
-  'New': 'new',
-  'Assigned': 'assigned',
-  'In Progress': 'in-progress',
-  'Completed': 'completed',
-  'Done': 'done',
-  'Closed': 'closed'
-};
-
 export default function EmployeeComplaintDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -392,7 +383,7 @@ export default function EmployeeComplaintDetailPage() {
           <div>
             <h1 className="text-2xl font-bold tracking-tight">{complaint.title}</h1>
             <div className="flex items-center gap-2 mt-2">
-              <Badge variant={statusVariantMap[complaint.status]}>
+              <Badge variant={getStatusVariant(complaint.status)}>
                 {complaint.status}
               </Badge>
               <span className="text-sm text-muted-foreground">
@@ -498,7 +489,7 @@ export default function EmployeeComplaintDetailPage() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-muted-foreground">
-                    Current Status: <Badge variant={statusVariantMap[complaint.status]} className="ml-2">
+                    Current Status: <Badge variant={getStatusVariant(complaint.status)} className="ml-2">
                       {complaint.status}
                     </Badge>
                   </label>
@@ -651,7 +642,7 @@ export default function EmployeeComplaintDetailPage() {
                             <div className="flex items-center justify-between">
                               <p className="text-sm font-medium">
                                 Status changed to{' '}
-                                <Badge variant={statusVariantMap[entry.status as keyof typeof statusVariantMap]}>
+                                <Badge variant={getStatusVariant(entry.status)}>
                                   {entry.status}
                                 </Badge>
                               </p>

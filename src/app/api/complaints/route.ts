@@ -8,6 +8,9 @@ import NatureType from '@/models/NatureType';
 import ComplaintHistory from '@/models/ComplaintHistory';
 import whatsappService from '@/services/whatsappService';
 import { NotificationService } from '@/services/notificationService';
+import mongoose from 'mongoose';
+import Settings from '@/models/Settings';
+import User from '@/models/User';
 
 // Get complaints based on user role and permissions
 export async function GET(request: NextRequest) {
@@ -194,7 +197,7 @@ export async function POST(request: NextRequest) {
     
     if (body.clientId && (currentUser.role === 'admin' || currentUser.role === 'manager')) {
       // Verify the client exists
-      const client = await require('@/models/User').default.findOne({
+      const client = await User.findOne({
         _id: body.clientId,
         role: 'client',
         isActive: true
@@ -224,12 +227,12 @@ export async function POST(request: NextRequest) {
     let defaultAssigneeId;
     
     // Get system settings for auto-routing
-    const mongoose = require('mongoose');
-    const Settings = mongoose.models.Settings;
-    
     let settings = null;
-    if (Settings) {
+    try {
       settings = await Settings.findOne({ type: 'system' }).populate('autoRouting.departments');
+    } catch (settingsError) {
+      console.log('Settings model not available, using fallback routing');
+      settings = null;
     }
     
     if (settings && settings.autoRouting.enabled && settings.autoRouting.departments.length > 0) {

@@ -393,7 +393,16 @@ export default function ClientDashboard() {
 }
 
 // Component for statistics cards
-const StatsCard = ({ title, value, icon, description, className = '', iconClass = '' }) => (
+interface StatsCardProps {
+  title: string;
+  value: number;
+  icon: React.ReactNode;
+  description: string;
+  className?: string;
+  iconClass?: string;
+}
+
+const StatsCard = ({ title, value, icon, description, className = '', iconClass = '' }: StatsCardProps) => (
   <Card className={`${componentPatterns.statsCard.base} ${className}`}>
     <CardHeader className="pb-2">
       <div className="flex justify-between items-start">
@@ -411,7 +420,12 @@ const StatsCard = ({ title, value, icon, description, className = '', iconClass 
 );
 
 // Component for complaint cards
-const ComplaintCard = ({ complaint, handleClick }) => {
+interface ComplaintCardProps {
+  complaint: Complaint;
+  handleClick: () => void;
+}
+
+const ComplaintCard = ({ complaint, handleClick }: ComplaintCardProps) => {
   const formattedDate = complaint.createdAt 
     ? format(new Date(complaint.createdAt), 'MMM dd, yyyy')
     : 'Unknown date';
