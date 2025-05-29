@@ -179,7 +179,7 @@ export async function POST(request: NextRequest) {
     
     // Validate required fields
     if (!body.title || !body.description || !body.errorType || !body.errorScreen || !body.natureType) {
-      const missingFields = [];
+      const missingFields: string[] = [];
       if (!body.title) missingFields.push('title');
       if (!body.description) missingFields.push('description');
       if (!body.errorType) missingFields.push('errorType');
