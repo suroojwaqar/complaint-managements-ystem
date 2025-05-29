@@ -188,7 +188,7 @@ export default function AdminComplaintsPage() {
     }
 
     // Update active filters
-    const activeFiltersList = [];
+    const activeFiltersList: string[] = [];
     if (searchTerm) activeFiltersList.push('Search');
     if (statusFilter && statusFilter !== 'all') activeFiltersList.push('Status');
     if (departmentFilter && departmentFilter !== 'all') activeFiltersList.push('Department');
