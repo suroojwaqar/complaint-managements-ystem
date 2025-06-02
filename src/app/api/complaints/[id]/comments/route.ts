@@ -163,7 +163,15 @@ export async function POST(
         // Send notification in background (don't await)
         whatsappService.notifyCommentAdded(
           populatedComplaint,
-          currentUser,
+          {
+            _id: currentUser.id,
+            name: currentUser.name || 'Unknown User',
+            email: currentUser.email || '',
+            role: currentUser.role as 'client' | 'employee' | 'manager' | 'admin',
+            isActive: true,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          },
           body.content || 'Attachment added',
           recipients
         ).then(() => {

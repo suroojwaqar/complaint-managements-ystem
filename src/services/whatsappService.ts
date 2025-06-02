@@ -1,4 +1,4 @@
-import { User } from '@/types/auth';
+import { User } from '@/types/index';
 import { getEnv } from '@/lib/env';
 
 interface WhatsAppMessagePayload {

@@ -73,7 +73,15 @@ export async function PATCH(
       // Send notification in background (don't await)
       whatsappService.notifyStatusChanged(
         updatedComplaint,
-        session.user,
+        {
+          _id: session.user.id,
+          name: session.user.name || 'Unknown User',
+          email: session.user.email || '',
+          role: session.user.role as 'client' | 'employee' | 'manager' | 'admin',
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        },
         oldStatus,
         status,
         recipients

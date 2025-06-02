@@ -16,7 +16,7 @@ export class NotificationService {
       const admins = await User.find({ 
         role: 'admin', 
         isActive: true,
-        phone: { $exists: true, $ne: null, $ne: '' }
+        phone: { $exists: true, $ne: null, $nin: ['', null] }
       }).select('phone name');
       
       console.log(`Found ${admins.length} admins with phones:`, admins.map(a => ({ name: a.name, phone: a.phone })));
@@ -48,7 +48,7 @@ export class NotificationService {
         role: 'manager', 
         department: departmentId,
         isActive: true,
-        phone: { $exists: true, $ne: null, $ne: '' }
+        phone: { $exists: true, $ne: null, $nin: ['', null] }
       }).select('phone name');
       
       console.log(`Found ${managers.length} managers with phones:`, managers.map(m => ({ name: m.name, phone: m.phone })));
@@ -202,7 +202,7 @@ export class NotificationService {
     }
 
     // Remove duplicates and filter out empty values
-    const uniqueRecipients = [...new Set(recipients)].filter(phone => phone && phone.trim());
+    const uniqueRecipients = Array.from(new Set(recipients)).filter(phone => phone && phone.trim());
     console.log('Final recipients after deduplication:', uniqueRecipients);
     console.log('NotificationService.getNotificationRecipients - END');
     return uniqueRecipients;

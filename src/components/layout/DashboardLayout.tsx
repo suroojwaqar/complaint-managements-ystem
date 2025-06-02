@@ -19,6 +19,7 @@ import {
   User,
   Building2,
   Menu,
+  LucideIcon,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -31,7 +32,7 @@ interface SidebarProps {
   children: React.ReactNode;
 }
 
-const menuItems = {
+const menuItems: Record<string, MenuItem[]> = {
   admin: [
     {
       title: 'Dashboard',
@@ -139,13 +140,15 @@ const menuItems = {
   ],
 };
 
+interface MenuItem {
+  title: string;
+  icon: LucideIcon;
+  href?: string;
+  children?: MenuItem[];
+}
+
 interface SidebarItemProps {
-  item: {
-    title: string;
-    icon: React.ComponentType<{ className?: string }>;
-    href?: string;
-    children?: SidebarItemProps['item'][];
-  };
+  item: MenuItem;
   isCollapsed: boolean;
   level?: number;
 }

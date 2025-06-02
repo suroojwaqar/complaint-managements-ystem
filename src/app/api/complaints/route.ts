@@ -376,7 +376,15 @@ export async function POST(request: NextRequest) {
       // Send notification in background (don't await)
       whatsappService.notifyComplaintCreated(
         populatedComplaint,
-        currentUser,
+        {
+          _id: currentUser.id,
+          name: currentUser.name || 'Unknown User',
+          email: currentUser.email || '',
+          role: currentUser.role as 'client' | 'employee' | 'manager' | 'admin',
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        },
         stakeholderPhones.assignee || undefined,
         recipients
       ).catch(error => {

@@ -23,7 +23,7 @@ export function useCurrentUser() {
     }
   }, [session?.user?.id])
 
-  const fetchCurrentUser = async () => {
+  const fetchCurrentUser = async (): Promise<void> => {
     if (!session?.user) return
     
     try {
@@ -42,7 +42,7 @@ export function useCurrentUser() {
     }
   }
 
-  const refreshProfile = () => {
+  const refreshProfile = (): void => {
     fetchCurrentUser()
   }
 
