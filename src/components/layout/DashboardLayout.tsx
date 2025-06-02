@@ -139,7 +139,18 @@ const menuItems = {
   ],
 };
 
-function SidebarItem({ item, isCollapsed, level = 0 }: any) {
+interface SidebarItemProps {
+  item: {
+    title: string;
+    icon: React.ComponentType<{ className?: string }>;
+    href?: string;
+    children?: SidebarItemProps['item'][];
+  };
+  isCollapsed: boolean;
+  level?: number;
+}
+
+function SidebarItem({ item, isCollapsed, level = 0 }: SidebarItemProps) {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const hasChildren = item.children && item.children.length > 0;
@@ -167,8 +178,8 @@ function SidebarItem({ item, isCollapsed, level = 0 }: any) {
         </Button>
         {isOpen && !isCollapsed && (
           <div className="mt-1 space-y-1">
-            {item.children.map((child: any) => (
-              <SidebarItem key={child.href} item={child} isCollapsed={isCollapsed} level={level + 1} />
+            {item.children?.map((child) => (
+              <SidebarItem key={child.href || child.title} item={child} isCollapsed={isCollapsed} level={level + 1} />
             ))}
           </div>
         )}
@@ -186,7 +197,7 @@ function SidebarItem({ item, isCollapsed, level = 0 }: any) {
         level > 0 && 'ml-6'
       )}
     >
-      <Link href={item.href}>
+      <Link href={item.href || '/'}>
         <item.icon className="h-4 w-4" />
         {!isCollapsed && <span>{item.title}</span>}
       </Link>

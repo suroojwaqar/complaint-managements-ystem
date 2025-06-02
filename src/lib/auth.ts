@@ -3,6 +3,7 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import { compare } from 'bcryptjs';
 import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
+import { getEnv } from '@/lib/env';
 
 interface MongoUser {
   _id: {
@@ -85,6 +86,18 @@ export const authOptions: NextAuthOptions = {
       return session;
     }
   },
-  secret: process.env.NEXTAUTH_SECRET,
-  debug: process.env.NODE_ENV === 'development',
+  secret: getEnv().NEXTAUTH_SECRET,
+  debug: false, // Disable debug in production
+  
+  // Enhanced session configuration
+  session: {
+    strategy: 'jwt',
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
+  
+  // Enhanced pages configuration
+  pages: {
+    signIn: '/login',
+    error: '/login', // Redirect errors to login page
+  },
 };

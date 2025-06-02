@@ -166,95 +166,38 @@ export class NotificationService {
     switch (eventType) {
       case 'created':
         console.log('Processing created event...');
-        // New complaint: notify assignee, managers, and admins
-        if (assignee) {
-          console.log('Adding assignee:', assignee);
-          recipients.push(assignee);
-        }
-        console.log('Adding managers:', managers);
+        if (assignee) recipients.push(assignee);
         recipients.push(...managers);
-        console.log('Adding admins:', admins);
         recipients.push(...admins);
         break;
 
       case 'assigned':
       case 'reassigned':
         console.log('Processing assigned/reassigned event...');
-        // Assignment change: notify new assignee, managers, and admins
-        if (assignee) {
-          console.log('Adding assignee:', assignee);
-          recipients.push(assignee);
-        }
-        console.log('Adding managers:', managers);
+        if (assignee) recipients.push(assignee);
         recipients.push(...managers);
-        console.log('Adding admins:', admins);
         recipients.push(...admins);
         break;
 
       case 'status_changed':
         console.log('Processing status_changed event...');
-        // Status change: notify all stakeholders except the one who made the change
-        if (userRole !== 'client' && client) {
-          console.log('Adding client (not commenter):', client);
-          recipients.push(client);
-        } else {
-          console.log('Skipping client - either no phone or user is client');
-        }
-        if (userRole !== 'employee' && assignee) {
-          console.log('Adding assignee (not commenter):', assignee);
-          recipients.push(assignee);
-        } else {
-          console.log('Skipping assignee - either no phone or user is assignee');
-        }
-        if (userRole !== 'manager') {
-          console.log('Adding managers (user is not manager):', managers);
-          recipients.push(...managers);
-        } else {
-          console.log('Skipping managers - user is manager');
-        }
-        if (userRole !== 'admin') {
-          console.log('Adding admins (user is not admin):', admins);
-          recipients.push(...admins);
-        } else {
-          console.log('Skipping admins - user is admin');
-        }
+        if (userRole !== 'client' && client) recipients.push(client);
+        if (userRole !== 'employee' && assignee) recipients.push(assignee);
+        if (userRole !== 'manager') recipients.push(...managers);
+        if (userRole !== 'admin') recipients.push(...admins);
         break;
 
       case 'comment_added':
         console.log('Processing comment_added event...');
-        // Comment added: notify all stakeholders except the commenter
-        if (userRole !== 'client' && client) {
-          console.log('Adding client (not commenter):', client);
-          recipients.push(client);
-        } else {
-          console.log('Skipping client - either no phone or user is client');
-        }
-        if (userRole !== 'employee' && assignee) {
-          console.log('Adding assignee (not commenter):', assignee);
-          recipients.push(assignee);
-        } else {
-          console.log('Skipping assignee - either no phone or user is assignee');
-        }
-        if (userRole !== 'manager') {
-          console.log('Adding managers (user is not manager):', managers);
-          recipients.push(...managers);
-        } else {
-          console.log('Skipping managers - user is manager');
-        }
-        if (userRole !== 'admin') {
-          console.log('Adding admins (user is not admin):', admins);
-          recipients.push(...admins);
-        } else {
-          console.log('Skipping admins - user is admin');
-        }
+        if (userRole !== 'client' && client) recipients.push(client);
+        if (userRole !== 'employee' && assignee) recipients.push(assignee);
+        if (userRole !== 'manager') recipients.push(...managers);
+        if (userRole !== 'admin') recipients.push(...admins);
         break;
 
       default:
         console.log('Processing default event...');
-        // Default: notify managers and admins
-        console.log('Adding managers:', managers);
         recipients.push(...managers);
-        console.log('Adding admins:', admins);
         recipients.push(...admins);
     }
 

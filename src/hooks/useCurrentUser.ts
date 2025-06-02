@@ -30,7 +30,9 @@ export function useCurrentUser() {
       setLoading(true)
       const response = await fetch('/api/profile')
       if (response.ok) {
-        const data = await response.json()
+        const result = await response.json()
+        // Handle the new API response format
+        const data = result.success ? result.data : result
         setProfile(data)
       }
     } catch (error) {

@@ -302,12 +302,6 @@ export default function EnhancedCommentSystem({
                             }}
                             size="sm"
                           />
-                          {/* Debug logging */}
-                          {console.log('Comment author data:', {
-                            name: comment.author.name,
-                            profileImage: comment.author.profileImage,
-                            email: comment.author.email
-                          })}
                           <div>
                             <div className="flex items-center gap-2">
                               <span className="font-medium text-sm">

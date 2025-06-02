@@ -4,32 +4,49 @@ const nextConfig = {
   poweredByHeader: false,
   compress: true,
   
-  // Fix for dynamic route issues during build
-  output: 'standalone',
+  // Remove output standalone for Vercel
+  // output: 'standalone', // Remove this line - not needed for Vercel
   
-  // Better error reporting during build
+  // FIX: Don't ignore TypeScript errors - fix them instead
   typescript: {
-    ignoreBuildErrors: false,
+    ignoreBuildErrors: false, // Changed to false - fix your TS errors!
   },
   eslint: {
     ignoreDuringBuilds: false,
   },
   
-  // Disable experimental CSS optimization that's causing critters error
+  // Suppress punycode deprecation warning
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        punycode: false,
+      };
+    }
+    
+    // Add proper externals for serverless
+    if (isServer) {
+      config.externals.push('mongodb', 'mongoose');
+    }
+    
+    return config;
+  },
+  
+  // Optimizations for Vercel
   experimental: {
-    // optimizeCss: true, // DISABLED - causing missing critters module error
-    optimizePackageImports: ['lucide-react'],
+    optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
+    serverComponentsExternalPackages: ['mongoose', 'mongodb'],
+  },
+  
+  // Image configuration
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**',
+      },
+    ],
   },
 };
-
-// Add webpack configuration for better debugging
-if (process.env.NODE_ENV === 'development') {
-  nextConfig.webpack = (config, { dev, isServer }) => {
-    if (dev) {
-      config.devtool = 'eval-source-map';
-    }
-    return config;
-  };
-}
 
 module.exports = nextConfig;

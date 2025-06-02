@@ -19,7 +19,7 @@ import {
   AlertCircle,
   Settings,
   Filter,
-  MarkAsRead
+  CheckCheck
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 

@@ -7,7 +7,7 @@ interface ErrorDisplayProps {
   title?: string;
   message: string;
   onRetry?: () => void;
-  variant?: 'destructive' | 'warning' | 'info';
+  variant?: 'destructive' | 'default';
   className?: string;
 }
 
@@ -20,8 +20,7 @@ export function ErrorDisplay({
 }: ErrorDisplayProps) {
   const getIcon = () => {
     switch (variant) {
-      case 'warning': return AlertCircle;
-      case 'info': return Info;
+      case 'default': return Info;
       default: return AlertTriangle;
     }
   };
@@ -103,7 +102,7 @@ export function NetworkError({
       title="Connection Error"
       message={message}
       onRetry={onRetry}
-      variant="warning"
+      variant="default"
     />
   );
 }

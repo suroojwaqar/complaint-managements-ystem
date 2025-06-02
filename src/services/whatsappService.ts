@@ -1,4 +1,5 @@
 import { User } from '@/types/auth';
+import { getEnv } from '@/lib/env';
 
 interface WhatsAppMessagePayload {
   chatId: string;
@@ -28,10 +29,12 @@ class WhatsAppService {
   private defaultCountryCode: string;
 
   constructor() {
-    this.apiUrl = process.env.WAAPI_BASE_URL || 'https://waapi.app/api/v1';
-    this.instanceId = process.env.WAAPI_INSTANCE_ID || '';
-    this.apiKey = process.env.WAAPI_API_KEY || '';
-    this.defaultCountryCode = process.env.DEFAULT_COUNTRY_CODE || '92'; // Default to Pakistan, configurable
+    // FIXED: Use getEnv() instead of direct process.env access
+    const env = getEnv();
+    this.apiUrl = env.WAAPI_BASE_URL || 'https://waapi.app/api/v1';
+    this.instanceId = env.WAAPI_INSTANCE_ID || '';
+    this.apiKey = env.WAAPI_API_KEY || '';
+    this.defaultCountryCode = env.DEFAULT_COUNTRY_CODE || '92';
 
     if (!this.instanceId || !this.apiKey) {
       console.warn('WhatsApp API credentials not configured. Set WAAPI_INSTANCE_ID and WAAPI_API_KEY environment variables.');
@@ -42,9 +45,6 @@ class WhatsAppService {
     return !!(this.instanceId && this.apiKey);
   }
 
-  /**
-   * Send WhatsApp message via WAAPI
-   */
   private async sendMessage(chatId: string, message: string): Promise<boolean> {
     if (!this.isConfigured()) {
       console.log('WhatsApp service not configured, skipping message send');
@@ -57,15 +57,7 @@ class WhatsAppService {
         message: message
       };
 
-      console.log('=== SENDING WHATSAPP MESSAGE ===');
-      console.log('ChatId:', chatId);
-      console.log('Message length:', message.length);
-      console.log('Instance ID:', this.instanceId);
-      console.log('API Key (first 8 chars):', this.apiKey.slice(0, 8) + '...');
-      
       const fullUrl = `${this.apiUrl}/instances/${this.instanceId}/client/action/send-message`;
-      console.log('Full URL:', fullUrl);
-      console.log('Payload:', JSON.stringify(payload, null, 2));
 
       const response = await fetch(fullUrl, {
         method: 'POST',
@@ -77,24 +69,12 @@ class WhatsAppService {
         body: JSON.stringify(payload),
       });
 
-      console.log('Response status:', response.status, response.statusText);
-      
-      const responseText = await response.text();
-      let result;
-      try {
-        result = JSON.parse(responseText);
-      } catch {
-        result = { raw: responseText };
-      }
-
-      console.log('Response body:', result);
-
       if (!response.ok) {
-        console.error('WhatsApp API Error:', response.status, result);
+        console.error('WhatsApp API Error:', response.status);
         return false;
       }
 
-      console.log('✅ WhatsApp message sent successfully:', result);
+      console.log('✅ WhatsApp message sent successfully');
       return true;
 
     } catch (error) {
@@ -103,79 +83,44 @@ class WhatsAppService {
     }
   }
 
-  /**
-   * Format phone number for WhatsApp - More flexible approach
-   */
   private formatPhoneNumber(phone: string): string {
     if (!phone) return '';
     
-    // Remove all non-numeric characters
     let cleaned = phone.replace(/\D/g, '');
-    
-    // If the number is empty after cleaning, return empty
     if (!cleaned) return '';
     
-    console.log(`Formatting phone: "${phone}" -> cleaned: "${cleaned}"`);
-    
-    // If number starts with 0, it's likely a local number
     if (cleaned.startsWith('0')) {
       cleaned = this.defaultCountryCode + cleaned.slice(1);
-      console.log(`Detected local number (starts with 0), added country code: ${cleaned}`);
-    }
-    // If number is exactly 10 digits and doesn't appear to have country code
-    else if (cleaned.length === 10 && !this.looksLikeInternationalNumber(cleaned)) {
+    } else if (cleaned.length === 10 && !this.looksLikeInternationalNumber(cleaned)) {
       cleaned = this.defaultCountryCode + cleaned;
-      console.log(`Detected 10-digit local number, added country code: ${cleaned}`);
-    }
-    // If number is 11 digits and doesn't start with 1 (US) or other single-digit codes
-    else if (cleaned.length === 11 && !cleaned.startsWith('1') && !this.looksLikeInternationalNumber(cleaned)) {
-      // Might be local number with extra digit, try removing first digit and adding country code
-      if (cleaned.startsWith('0')) {
-        cleaned = this.defaultCountryCode + cleaned.slice(1);
-        console.log(`Detected 11-digit number starting with 0, reformatted: ${cleaned}`);
-      } else {
-        console.log(`11-digit number doesn't start with 0, using as-is: ${cleaned}`);
-      }
-    }
-    else {
-      console.log(`Number appears to be international or correct format, using as-is: ${cleaned}`);
     }
     
-    const formattedNumber = cleaned + '@c.us';
-    console.log(`Final WhatsApp format: ${phone} → ${formattedNumber}`);
-    return formattedNumber;
+    return cleaned + '@c.us';
   }
   
-  /**
-   * Check if number looks like it already has an international country code
-   */
   private looksLikeInternationalNumber(number: string): boolean {
-    // Common country code patterns
     const patterns = [
-      /^1[0-9]/,     // US/Canada (1xxx)
-      /^7[0-9]/,     // Russia/Kazakhstan (7xxx)
+      /^1[0-9]/,     // US/Canada
+      /^7[0-9]/,     // Russia/Kazakhstan
       /^2[0-9]/,     // Africa/some Europe
       /^3[0-9]/,     // Europe
       /^4[0-9]/,     // Europe
       /^5[0-9]/,     // South America
       /^6[0-9]/,     // Southeast Asia/Oceania
       /^8[0-9]/,     // East Asia
-      /^9[0-5]/      // Asia/Middle East (including 92 for Pakistan)
+      /^9[0-5]/      // Asia/Middle East
     ];
     
     return patterns.some(pattern => pattern.test(number));
   }
 
-  /**
-   * Generate complaint notification message
-   */
   private generateNotificationMessage(data: ComplaintNotificationData): string {
     const { complaint, user, eventType, details } = data;
     
-    const complaintUrl = `${process.env.NEXTAUTH_URL}/admin/complaints/${complaint._id}`;
+    const env = getEnv();
+    const complaintUrl = `${env.NEXTAUTH_URL || 'http://localhost:3000'}/admin/complaints/${complaint._id}`;
     const shortId = complaint._id.toString().slice(-6);
 
-    let message = '';
     const emojis = {
       created: '🆕',
       assigned: '👤',
@@ -188,7 +133,7 @@ class WhatsAppService {
 
     switch (eventType) {
       case 'created':
-        message = `${emoji} *New Complaint Created*
+        return `${emoji} *New Complaint Created*
 
 *ID:* #${shortId}
 *Title:* ${complaint.title}
@@ -201,10 +146,9 @@ class WhatsAppService {
 ${complaint.description}
 
 View details: ${complaintUrl}`;
-        break;
 
       case 'assigned':
-        message = `${emoji} *Complaint Assigned*
+        return `${emoji} *Complaint Assigned*
 
 *ID:* #${shortId}
 *Title:* ${complaint.title}
@@ -214,10 +158,9 @@ View details: ${complaintUrl}`;
 *Assigned by:* ${user.name}
 
 View details: ${complaintUrl}`;
-        break;
 
       case 'status_changed':
-        message = `${emoji} *Complaint Status Updated*
+        return `${emoji} *Complaint Status Updated*
 
 *ID:* #${shortId}
 *Title:* ${complaint.title}
@@ -226,10 +169,9 @@ View details: ${complaintUrl}`;
 *Assigned to:* ${complaint.currentAssigneeId?.name || 'Unknown'}
 
 View details: ${complaintUrl}`;
-        break;
 
       case 'comment_added':
-        message = `${emoji} *New Comment Added*
+        return `${emoji} *New Comment Added*
 
 *ID:* #${shortId}
 *Title:* ${complaint.title}
@@ -240,10 +182,9 @@ View details: ${complaintUrl}`;
 ${details?.comment || 'No content'}
 
 View details: ${complaintUrl}`;
-        break;
 
       case 'reassigned':
-        message = `${emoji} *Complaint Reassigned*
+        return `${emoji} *Complaint Reassigned*
 
 *ID:* #${shortId}
 *Title:* ${complaint.title}
@@ -253,10 +194,9 @@ View details: ${complaintUrl}`;
 *Reassigned by:* ${user.name}
 
 View details: ${complaintUrl}`;
-        break;
 
       default:
-        message = `📢 *Complaint Update*
+        return `📢 *Complaint Update*
 
 *ID:* #${shortId}
 *Title:* ${complaint.title}
@@ -265,76 +205,39 @@ View details: ${complaintUrl}`;
 
 View details: ${complaintUrl}`;
     }
-
-    return message;
   }
 
-  /**
-   * Send notification to multiple users
-   */
   async sendComplaintNotification(data: ComplaintNotificationData, recipients: string[]): Promise<void> {
-    console.log('\n=== WHATSAPP SERVICE NOTIFICATION START ===');
-    console.log('whatsappService.sendComplaintNotification called');
-    console.log('Event type:', data.eventType);
-    console.log('User:', data.user.name, '(', data.user.role, ')');
-    console.log('Recipients:', recipients);
-    console.log('Recipients count:', recipients.length);
-    console.log('Using default country code:', this.defaultCountryCode);
-    
     if (!this.isConfigured()) {
       console.log('❌ WhatsApp service not configured, skipping notifications');
-      console.log('WAAPI_INSTANCE_ID:', this.instanceId || 'NOT SET');
-      console.log('WAAPI_API_KEY:', this.apiKey ? 'SET' : 'NOT SET');
-      console.log('=== WHATSAPP SERVICE NOTIFICATION END ===\n');
       return;
     }
 
     const message = this.generateNotificationMessage(data);
-    console.log('Generated message preview:', message.substring(0, 100) + '...');
-    
     const validRecipients = recipients.filter(phone => phone && phone.trim());
-    console.log('Valid recipients after filtering:', validRecipients);
-    console.log('Valid recipients count:', validRecipients.length);
 
     if (validRecipients.length === 0) {
       console.log('⚠️  No valid phone numbers provided for WhatsApp notification');
-      console.log('=== WHATSAPP SERVICE NOTIFICATION END ===\n');
       return;
     }
 
-    console.log(`Sending WhatsApp notifications to ${validRecipients.length} recipients...`);
-
-    // Send notifications with delay to avoid rate limiting
     for (let i = 0; i < validRecipients.length; i++) {
       const phone = validRecipients[i];
       const chatId = this.formatPhoneNumber(phone);
       
-      console.log(`Sending ${i + 1}/${validRecipients.length} to ${phone} -> ${chatId}`);
-
       try {
-        const success = await this.sendMessage(chatId, message);
-        if (success) {
-          console.log(`✅ Message ${i + 1}/${validRecipients.length} sent successfully`);
-        } else {
-          console.log(`❌ Message ${i + 1}/${validRecipients.length} failed`);
-        }
+        await this.sendMessage(chatId, message);
       } catch (error) {
         console.log(`❌ Message ${i + 1}/${validRecipients.length} error:`, error);
       }
 
-      // Add delay between messages to avoid rate limiting (1 second)
+      // Add delay between messages to avoid rate limiting
       if (i < validRecipients.length - 1) {
-        console.log('Waiting 1 second before next message...');
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
     }
-    
-    console.log('=== WHATSAPP SERVICE NOTIFICATION END ===\n');
   }
 
-  /**
-   * Send notification when new complaint is created
-   */
   async notifyComplaintCreated(complaint: any, creator: User, assigneePhone?: string, adminPhones: string[] = []): Promise<void> {
     const recipients = [...adminPhones];
     if (assigneePhone) recipients.push(assigneePhone);
@@ -346,9 +249,6 @@ View details: ${complaintUrl}`;
     }, recipients);
   }
 
-  /**
-   * Send notification when complaint is assigned/reassigned
-   */
   async notifyComplaintAssigned(
     complaint: any, 
     assigner: User, 
@@ -368,9 +268,6 @@ View details: ${complaintUrl}`;
     }, recipientPhones);
   }
 
-  /**
-   * Send notification when complaint status changes
-   */
   async notifyStatusChanged(
     complaint: any, 
     updater: User, 
@@ -389,9 +286,6 @@ View details: ${complaintUrl}`;
     }, recipientPhones);
   }
 
-  /**
-   * Send notification when comment is added
-   */
   async notifyCommentAdded(
     complaint: any, 
     commentAuthor: User, 
@@ -409,9 +303,6 @@ View details: ${complaintUrl}`;
     }, recipientPhones);
   }
 
-  /**
-   * Test WhatsApp API connection
-   */
   async testConnection(): Promise<{ success: boolean; message: string }> {
     if (!this.isConfigured()) {
       return {

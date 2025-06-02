@@ -10,11 +10,10 @@ export function Toaster() {
     <SonnerToaster
       position="top-right"
       toastOptions={{
-        // Use light theme if system theme is light, dark theme otherwise
-        // You can customize this logic further if needed
-        theme: theme === 'light' ? 'light' : 'dark',
+        // Remove theme property as it's not supported in this version
         className: 'border border-border',
       }}
+      theme={theme === 'light' ? 'light' : 'dark'} // Move theme to component level
     />
   );
 }

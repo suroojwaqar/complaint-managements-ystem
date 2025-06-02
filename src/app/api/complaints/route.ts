@@ -227,7 +227,7 @@ export async function POST(request: NextRequest) {
     let defaultAssigneeId;
     
     // Get system settings for auto-routing
-    let settings = null;
+    let settings: any = null;
     try {
       settings = await Settings.findOne({ type: 'system' }).populate('autoRouting.departments');
     } catch (settingsError) {
@@ -235,13 +235,13 @@ export async function POST(request: NextRequest) {
       settings = null;
     }
     
-    if (settings && settings.autoRouting.enabled && settings.autoRouting.departments.length > 0) {
+    if (settings && (settings as any).autoRouting?.enabled && (settings as any).autoRouting?.departments?.length > 0) {
       // Use settings-based auto-routing
       console.log('Using settings-based auto-routing');
       
       // Get a random department from the enabled departments for load balancing
       const enabledDepartments = await Department.find({
-        _id: { $in: settings.autoRouting.departments },
+        _id: { $in: (settings as any).autoRouting.departments },
         isActive: true
       }).populate('managerId');
       
@@ -255,9 +255,9 @@ export async function POST(request: NextRequest) {
         console.log(`Auto-assigned to department: ${assignedDepartment.name}, Manager: ${assignedDepartment.managerId.name}`);
       } else {
         // Fallback to default department if configured
-        if (settings.defaultDepartment) {
+        if ((settings as any).defaultDepartment) {
           assignedDepartment = await Department.findOne({ 
-            _id: settings.defaultDepartment, 
+            _id: (settings as any).defaultDepartment, 
             isActive: true 
           }).populate('managerId');
           
